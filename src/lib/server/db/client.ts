@@ -82,6 +82,21 @@ function getSqliteClient(): any {
   }
 }
 
+let migrationPromise: Promise<void> | null = null;
+export async function ensureDbReady(): Promise<void> {
+  if (!migrationPromise) {
+    migrationPromise = (async () => {
+      try {
+        const { runMigrations } = await import('./migrations');
+        await runMigrations();
+      } catch (e) {
+        console.warn('Auto-migration deferred:', e);
+      }
+    })();
+  }
+  return migrationPromise;
+}
+
 /**
  * Unified Async Database Interface for Supabase/PostgreSQL with automatic parameter translation
  */

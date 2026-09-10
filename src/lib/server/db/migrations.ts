@@ -31,59 +31,65 @@ export async function runMigrations(): Promise<void> {
       }
     }
 
-    const adminRow = await db.queryOne('SELECT id FROM users WHERE email = ?', ['techyogeeknirvana@gmail.com']);
-    if (!adminRow) {
-      const adminId = 'user_lead_admin';
-      const now = new Date().toISOString();
-      const today = now.slice(0, 10);
-      const defaultPasswordHash = await bcrypt.hash('Admin@TYGN2026!', 12);
+    // Seed initial users from SEED_USERS
+    const { SEED_USERS } = await import('@/lib/db/seedData');
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+    const defaultPasswordHash = await bcrypt.hash('Admin@TYGN2026!', 10);
 
-      await db.execute(`
-        INSERT INTO users (
-          id, name, username, email, password_hash, avatar, role, title, college_or_company,
-          education, skills, interests, github, linkedin, experience_level, xp, level,
-          badges, bio, is_suspended, is_email_verified, email_verified_at, referral_code,
-          referral_count, created_at, updated_at
-        ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?
-        )
-      `, [
-        adminId,
-        'TechYOGeek Nirvana',
-        'techyogeeknirvana',
-        'techyogeeknirvana@gmail.com',
-        defaultPasswordHash,
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        'ADMIN',
-        'Lead Platform Architect & Administrator',
-        'Techyogeek Nirvana Core',
-        'B.Tech in Computer Science',
-        JSON.stringify(['System Architecture', 'TypeScript', 'Next.js', 'Go', 'AI Systems', 'Cloud Native']),
-        JSON.stringify(['Developer Tools', 'Open Source', 'Community Building', 'AI Agents']),
-        'https://github.com/techyogeek',
-        'https://www.linkedin.com/in/techyogeek-nirvana-834b92309/',
-        'Tech Titan',
-        15400,
-        'Tech Titan',
-        JSON.stringify(['🏆 Quiz Master', '💻 Developer', '🎤 Event Speaker', '🔥 Community Contributor', '🤖 AI Explorer']),
-        'Ishpreet Singh is the platform architect and founder of Techyogeek Nirvana (B.Tech Student Community).',
-        0,
-        1,
-        now,
-        'TYGN-ADMIN-LEAD',
-        0,
-        now,
-        now
-      ]);
+    for (const seed of SEED_USERS) {
+      const cleanEmail = (seed.email || '').toLowerCase().trim();
+      if (!cleanEmail) continue;
 
-      await db.execute(`
-        INSERT INTO credit_wallets (
-          user_id, daily_credits, referral_credits, purchased_credits, total_credits, last_daily_reset, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [adminId, 10, 0, 0, 10, today, now, now]);
+      const existing = await db.queryOne('SELECT id FROM users WHERE id = ? OR LOWER(email) = ?', [seed.id, cleanEmail]);
+      if (!existing) {
+        await db.execute(`
+          INSERT INTO users (
+            id, name, username, email, password_hash, avatar, role, title, college_or_company,
+            education, skills, interests, github, linkedin, experience_level, xp, level,
+            badges, bio, is_suspended, is_email_verified, email_verified_at, referral_code,
+            referral_count, created_at, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?
+          )
+        `, [
+          seed.id,
+          seed.name,
+          seed.username,
+          cleanEmail,
+          defaultPasswordHash,
+          seed.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(seed.name)}&background=0284c7&color=fff&bold=true`,
+          seed.role,
+          seed.title || 'Developer & Member',
+          seed.collegeOrCompany || 'Techyogeek Nirvana Community',
+          seed.education || 'B.Tech / Computer Science',
+          JSON.stringify(seed.skills || []),
+          JSON.stringify(seed.interests || []),
+          seed.github || '',
+          seed.linkedin || '',
+          seed.experienceLevel || 'Beginner',
+          seed.xp || 100,
+          seed.level || 'Novice',
+          JSON.stringify(seed.badges || []),
+          seed.bio || '',
+          0,
+          1,
+          now,
+          seed.referralCode || `TYGN-${seed.username.toUpperCase()}`,
+          seed.referralCount || 0,
+          seed.createdAt || now,
+          now
+        ]);
+
+        await db.execute(`
+          INSERT INTO credit_wallets (
+            user_id, daily_credits, referral_credits, purchased_credits, total_credits, last_daily_reset, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [seed.id, 10, 0, 0, 10, today, now, now]);
+      }
     }
   } catch (err) {
     console.warn('Migration hook skipped/deferred:', err);

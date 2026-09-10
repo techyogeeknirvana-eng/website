@@ -252,8 +252,8 @@ export default function UserManagementPage() {
     // 2. Update local dbStore mirror
     dbStore.toggleSuspendUser(userId, currentUser, nextSuspended);
 
-    // 3. Call server API with explicit nextSuspended state
-    const res = await api.users.toggleSuspend(userId, nextSuspended);
+    // 3. Call server API with explicit nextSuspended state and fallback target user
+    const res = await api.users.toggleSuspend(userId, nextSuspended, target);
     if (res.error) {
       console.error('Suspension API error:', res.error);
       // Revert if API failed
@@ -289,7 +289,7 @@ export default function UserManagementPage() {
     dbStore.changeUserRole(userId, newRole, currentUser);
 
     // 3. Call server API
-    const res = await api.users.changeRole(userId, newRole);
+    const res = await api.users.changeRole(userId, newRole, target);
     if (res.error) {
       console.error('Role change API error:', res.error);
       setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: target.role } : u));

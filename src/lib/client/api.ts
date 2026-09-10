@@ -73,15 +73,15 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ updates }),
       }),
-    changeRole: (targetUserId: string, role: 'USER' | 'ADMIN') =>
+    changeRole: (targetUserId: string, role: 'USER' | 'ADMIN', targetUser?: Partial<User>) =>
       request<{ success: boolean }>('/api/users', {
         method: 'PATCH',
-        body: JSON.stringify({ action: 'change_role', targetUserId, role }),
+        body: JSON.stringify({ action: 'change_role', targetUserId, role, user: targetUser }),
       }),
-    toggleSuspend: (targetUserId: string, suspend?: boolean) =>
+    toggleSuspend: (targetUserId: string, suspend?: boolean, targetUser?: Partial<User>) =>
       request<{ success: boolean; isSuspended: boolean }>('/api/users', {
         method: 'PATCH',
-        body: JSON.stringify({ action: 'toggle_suspend', targetUserId, suspend }),
+        body: JSON.stringify({ action: 'toggle_suspend', targetUserId, suspend, user: targetUser }),
       }),
     adminUpdate: (targetUserId: string, updates: Partial<User>) =>
       request<User>('/api/users', {

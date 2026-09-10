@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { extractAuthUser } from '@/lib/server/middleware/authGuard';
 import { userService } from '@/lib/server/services/userService';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
+import { ensureDbReady } from '@/lib/server/db/client';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,6 +10,7 @@ export const fetchCache = 'force-no-store';
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDbReady();
     const users = await userService.getAllUsers();
     const res = apiSuccess(users);
     res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
@@ -22,6 +24,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    await ensureDbReady();
     const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized. Please log in.', 401);
@@ -38,7 +41,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetUserId || !role) {
         return apiError('targetUserId and role are required.', 400);
       }
-      await userService.changeRole(targetUserId, role, authUser);
+      await userService.changeRole(targetUserId, role, authUser, body.user);
       return apiSuccess({ success: true, message: `Role changed to ${role}` });
     }
 
@@ -51,7 +54,7 @@ export async function PATCH(req: NextRequest) {
         return apiError('targetUserId is required.', 400);
       }
       const explicitStatus = suspend !== undefined ? Boolean(suspend) : undefined;
-      const isSuspended = await userService.toggleSuspend(targetUserId, authUser, explicitStatus);
+      const isSuspended = await userService.toggleSuspend(targetUserId, authUser, explicitStatus, body.user);
       return apiSuccess({ success: true, isSuspended });
     }
 

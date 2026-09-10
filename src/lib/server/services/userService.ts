@@ -1,5 +1,6 @@
 import { db } from '../db/client';
 import { User, UserRole } from '@/types';
+import { SEED_USERS } from '@/lib/db/seedData';
 import crypto from 'crypto';
 
 function safeParseJson(val: any, fallback: any = []): any {
@@ -46,22 +47,114 @@ export const userService = {
     };
   },
 
+  async ensureUserInDb(u: Partial<User>): Promise<void> {
+    if (!u.id && !u.email) return;
+    const cleanEmail = (u.email || '').toLowerCase().trim();
+    const existing = await db.queryOne('SELECT id FROM users WHERE id = ? OR (email != \'\' AND LOWER(email) = ?)', [u.id || '', cleanEmail]);
+    if (existing) return;
+
+    const id = u.id || ('user_' + crypto.randomUUID().slice(0, 12));
+    const now = new Date().toISOString();
+    const today = now.slice(0, 10);
+    const username = (u.username || (cleanEmail ? cleanEmail.split('@')[0] : 'user')).toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user';
+    const referralCode = u.referralCode || this.generateReferralCode(username);
+
+    await db.execute(`
+      INSERT INTO users (
+        id, name, username, email, password_hash, avatar, role, title, college_or_company,
+        education, skills, interests, github, linkedin, experience_level, xp, level,
+        badges, bio, is_suspended, is_email_verified, email_verified_at, referral_code,
+        referral_count, created_at, updated_at
+      ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?
+      )
+    `, [
+      id,
+      u.name || 'Community Member',
+      username,
+      cleanEmail,
+      null,
+      u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}&background=0284c7&color=fff&bold=true`,
+      u.role || 'USER',
+      u.title || 'Developer & Member',
+      u.collegeOrCompany || 'Techyogeek Nirvana Community',
+      u.education || 'B.Tech / Computer Science',
+      JSON.stringify(u.skills || []),
+      JSON.stringify(u.interests || []),
+      u.github || '',
+      u.linkedin || '',
+      u.experienceLevel || 'Beginner',
+      u.xp || 100,
+      u.level || 'Novice',
+      JSON.stringify(u.badges || []),
+      u.bio || '',
+      u.isSuspended ? 1 : 0,
+      1,
+      now,
+      referralCode,
+      u.referralCount || 0,
+      u.createdAt || now,
+      now
+    ]);
+
+    await db.execute(`
+      INSERT INTO credit_wallets (
+        user_id, daily_credits, referral_credits, purchased_credits, total_credits, last_daily_reset, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [id, 10, 0, 0, 10, today, now, now]);
+  },
+
   async getUserById(id: string): Promise<User | null> {
     const row = await db.queryOne('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL', [id]);
-    return row ? this.mapRowToUser(row) : null;
+    if (row) return this.mapRowToUser(row);
+
+    // Auto-upsert from SEED_USERS if present
+    const seed = SEED_USERS.find(s => s.id === id);
+    if (seed) {
+      await this.ensureUserInDb(seed);
+      const created = await db.queryOne('SELECT * FROM users WHERE id = ?', [id]);
+      if (created) return this.mapRowToUser(created);
+    }
+    return null;
   },
 
   async getUserByEmail(email: string): Promise<User | null> {
-    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL', [email.toLowerCase().trim()]);
-    return row ? this.mapRowToUser(row) : null;
+    const cleanEmail = email.toLowerCase().trim();
+    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL', [cleanEmail]);
+    if (row) return this.mapRowToUser(row);
+
+    // Auto-upsert from SEED_USERS if present
+    const seed = SEED_USERS.find(s => s.email.toLowerCase().trim() === cleanEmail);
+    if (seed) {
+      await this.ensureUserInDb(seed);
+      const created = await db.queryOne('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+      if (created) return this.mapRowToUser(created);
+    }
+    return null;
   },
 
   async getUserByUsername(username: string): Promise<User | null> {
-    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(username) = ? AND deleted_at IS NULL', [username.toLowerCase().trim()]);
-    return row ? this.mapRowToUser(row) : null;
+    const cleanUsername = username.toLowerCase().trim();
+    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(username) = ? AND deleted_at IS NULL', [cleanUsername]);
+    if (row) return this.mapRowToUser(row);
+
+    const seed = SEED_USERS.find(s => s.username.toLowerCase().trim() === cleanUsername);
+    if (seed) {
+      await this.ensureUserInDb(seed);
+      const created = await db.queryOne('SELECT * FROM users WHERE LOWER(username) = ?', [cleanUsername]);
+      if (created) return this.mapRowToUser(created);
+    }
+    return null;
   },
 
   async getAllUsers(): Promise<User[]> {
+    // Ensure all seed users exist in DB
+    for (const seed of SEED_USERS) {
+      await this.ensureUserInDb(seed);
+    }
     const rows = await db.queryAll('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC');
     return rows.map((r) => this.mapRowToUser(r));
   },
@@ -110,15 +203,32 @@ export const userService = {
     return refreshed!;
   },
 
-  async changeRole(targetUserId: string, newRole: UserRole, adminUser: User): Promise<void> {
+  async changeRole(targetUserId: string, newRole: UserRole, adminUser: User, fallbackUser?: Partial<User>): Promise<void> {
     let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?', [targetUserId.toLowerCase().trim(), targetUserId.toLowerCase().trim()]);
       if (byEmail) {
         target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
+
+    if (!target && fallbackUser && (fallbackUser.email || fallbackUser.id)) {
+      await this.ensureUserInDb(fallbackUser);
+      target = (fallbackUser.id ? await this.getUserById(fallbackUser.id) : null) ||
+               (fallbackUser.email ? await this.getUserByEmail(fallbackUser.email) : null);
+      if (target) targetUserId = target.id;
+    }
+
+    if (!target) {
+      const seed = SEED_USERS.find(s => s.id === targetUserId || (s.email && s.email.toLowerCase().trim() === targetUserId.toLowerCase().trim()));
+      if (seed) {
+        await this.ensureUserInDb(seed);
+        target = await this.getUserById(seed.id);
+        if (target) targetUserId = target.id;
+      }
+    }
+
     if (!target) throw new Error('User not found.');
 
     if (target.email?.toLowerCase().trim() === 'techyogeeknirvana@gmail.com' && newRole !== 'ADMIN') {
@@ -145,15 +255,32 @@ export const userService = {
     ]);
   },
 
-  async toggleSuspend(targetUserId: string, adminUser: User, explicitStatus?: boolean): Promise<boolean> {
+  async toggleSuspend(targetUserId: string, adminUser: User, explicitStatus?: boolean, fallbackUser?: Partial<User>): Promise<boolean> {
     let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?', [targetUserId.toLowerCase().trim(), targetUserId.toLowerCase().trim()]);
       if (byEmail) {
         target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
+
+    if (!target && fallbackUser && (fallbackUser.email || fallbackUser.id)) {
+      await this.ensureUserInDb(fallbackUser);
+      target = (fallbackUser.id ? await this.getUserById(fallbackUser.id) : null) ||
+               (fallbackUser.email ? await this.getUserByEmail(fallbackUser.email) : null);
+      if (target) targetUserId = target.id;
+    }
+
+    if (!target) {
+      const seed = SEED_USERS.find(s => s.id === targetUserId || (s.email && s.email.toLowerCase().trim() === targetUserId.toLowerCase().trim()));
+      if (seed) {
+        await this.ensureUserInDb(seed);
+        target = await this.getUserById(seed.id);
+        if (target) targetUserId = target.id;
+      }
+    }
+
     if (!target) throw new Error('User not found.');
 
     if (target.email?.toLowerCase().trim() === 'techyogeeknirvana@gmail.com') {
