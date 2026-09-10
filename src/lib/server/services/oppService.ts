@@ -1,6 +1,16 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { Opportunity, SubmissionStatus, User, UserRole } from '@/types';
 import crypto from 'crypto';
+
+function safeParseJson(val: any, fallback: any = []): any {
+  if (!val) return fallback;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch (_) {
+    return fallback;
+  }
+}
 
 export interface OpportunityFilter {
   status?: SubmissionStatus;
@@ -12,9 +22,11 @@ export interface OpportunityFilter {
 }
 
 export const oppService = {
-  mapRow(row: any): Opportunity {
-    const db = getDatabase();
-    const savedUsers = db.prepare('SELECT user_id FROM opportunity_saves WHERE opportunity_id = ?').all(row.id) as { user_id: string }[];
+  async mapRow(row: any): Promise<Opportunity> {
+    const savedUsers = await db.queryAll<{ user_id: string }>(
+      'SELECT user_id FROM opportunity_saves WHERE opportunity_id = ?',
+      [row.id]
+    );
 
     return {
       id: row.id,
@@ -26,7 +38,7 @@ export const oppService = {
       isRemote: Boolean(row.is_remote),
       experience: row.experience || '',
       stipendOrSalary: row.stipend_or_salary || '',
-      skills: JSON.parse(row.skills || '[]'),
+      skills: safeParseJson(row.skills, []),
       description: row.description,
       applyUrl: row.apply_url,
       deadline: row.deadline,
@@ -43,8 +55,7 @@ export const oppService = {
     };
   },
 
-  listOpportunities(filter: OpportunityFilter = {}): { items: Opportunity[]; total: number } {
-    const db = getDatabase();
+  async listOpportunities(filter: OpportunityFilter = {}): Promise<{ items: Opportunity[]; total: number }> {
     const page = Math.max(1, filter.page || 1);
     const limit = Math.min(100, Math.max(1, filter.limit || 20));
     const offset = (page - 1) * limit;
@@ -78,38 +89,39 @@ export const oppService = {
 
     const whereClause = conditions.join(' AND ');
 
-    const countRow = db.prepare(`
+    const countRow = await db.queryOne<{ count: number }>(`
       SELECT COUNT(*) as count FROM opportunities o WHERE ${whereClause}
-    `).get(...params) as { count: number };
+    `, params);
 
-    const rows = db.prepare(`
+    const rows = await db.queryAll(`
       SELECT o.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
       FROM opportunities o
       JOIN users u ON o.posted_by_user_id = u.id
       WHERE ${whereClause}
       ORDER BY o.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    `, [...params, limit, offset]);
+
+    const items = await Promise.all(rows.map(r => this.mapRow(r)));
 
     return {
-      items: rows.map(r => this.mapRow(r)),
-      total: countRow.count,
+      items,
+      total: countRow ? Number(countRow.count) : 0,
     };
   },
 
-  createOpportunity(data: Partial<Opportunity>, user: User): Opportunity {
-    const db = getDatabase();
+  async createOpportunity(data: Partial<Opportunity>, user: User): Promise<Opportunity> {
     const id = data.id || ('opp_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
     const status: SubmissionStatus = 'pending';
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO opportunities (
         id, title, company, company_logo, type, location, is_remote, experience,
         stipend_or_salary, skills, description, apply_url, deadline, posted_by_user_id,
         status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       id,
       data.title || 'Untitled Opportunity',
       data.company || 'Company',
@@ -127,35 +139,34 @@ export const oppService = {
       status,
       now,
       now
-    );
+    ]);
 
-    return this.getOpportunityById(id)!;
+    const opp = await this.getOpportunityById(id);
+    return opp!;
   },
 
-  getOpportunityById(id: string): Opportunity | null {
-    const db = getDatabase();
-    const row = db.prepare(`
+  async getOpportunityById(id: string): Promise<Opportunity | null> {
+    const row = await db.queryOne(`
       SELECT o.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
       FROM opportunities o
       JOIN users u ON o.posted_by_user_id = u.id
       WHERE o.id = ? AND o.deleted_at IS NULL
-    `).get(id);
+    `, [id]);
 
-    return row ? this.mapRow(row) : null;
+    return row ? await this.mapRow(row) : null;
   },
 
-  reviewOpportunity(id: string, newStatus: SubmissionStatus, adminUser: User, rejectionReason?: string): Opportunity {
-    const db = getDatabase();
+  async reviewOpportunity(id: string, newStatus: SubmissionStatus, adminUser: User, rejectionReason?: string): Promise<Opportunity> {
     const now = new Date().toISOString();
 
-    db.prepare(`
+    await db.execute(`
       UPDATE opportunities SET status = ?, rejection_reason = ?, updated_at = ? WHERE id = ?
-    `).run(newStatus, rejectionReason || null, now, id);
+    `, [newStatus, rejectionReason || null, now, id]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -166,34 +177,33 @@ export const oppService = {
       id,
       `Reviewed opportunity. Set status to ${newStatus}`,
       'success'
-    );
+    ]);
 
-    return this.getOpportunityById(id)!;
+    const opp = await this.getOpportunityById(id);
+    return opp!;
   },
 
-  toggleSave(opportunityId: string, userId: string): boolean {
-    const db = getDatabase();
-    const existing = db.prepare('SELECT * FROM opportunity_saves WHERE user_id = ? AND opportunity_id = ?').get(userId, opportunityId);
+  async toggleSave(opportunityId: string, userId: string): Promise<boolean> {
+    const existing = await db.queryOne('SELECT * FROM opportunity_saves WHERE user_id = ? AND opportunity_id = ?', [userId, opportunityId]);
 
     if (existing) {
-      db.prepare('DELETE FROM opportunity_saves WHERE user_id = ? AND opportunity_id = ?').run(userId, opportunityId);
+      await db.execute('DELETE FROM opportunity_saves WHERE user_id = ? AND opportunity_id = ?', [userId, opportunityId]);
       return false;
     } else {
-      db.prepare('INSERT INTO opportunity_saves (user_id, opportunity_id, created_at) VALUES (?, ?, ?)').run(userId, opportunityId, new Date().toISOString());
+      await db.execute('INSERT INTO opportunity_saves (user_id, opportunity_id, created_at) VALUES (?, ?, ?)', [userId, opportunityId, new Date().toISOString()]);
       return true;
     }
   },
 
-  deleteOpportunity(id: string, adminUser: User): boolean {
-    const db = getDatabase();
+  async deleteOpportunity(id: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
-    const target = this.getOpportunityById(id);
-    const result = db.prepare('UPDATE opportunities SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, id);
-    if (result.changes > 0) {
-      db.prepare(`
+    const target = await this.getOpportunityById(id);
+    const result = await db.execute('UPDATE opportunities SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
+    if (result.rowCount > 0) {
+      await db.execute(`
         INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `, [
         'log_' + crypto.randomUUID(),
         now,
         adminUser.id,
@@ -204,21 +214,20 @@ export const oppService = {
         id,
         `Deleted opportunity "${target?.title || id}" at "${target?.company || 'N/A'}"`,
         'warning'
-      );
+      ]);
       return true;
     }
     return false;
   },
 
-  updateOpportunity(id: string, updates: Partial<Opportunity>, adminUser: User): Opportunity {
-    const db = getDatabase();
-    const current = this.getOpportunityById(id);
+  async updateOpportunity(id: string, updates: Partial<Opportunity>, adminUser: User): Promise<Opportunity> {
+    const current = await this.getOpportunityById(id);
     if (!current) throw new Error('Opportunity not found.');
 
     const now = new Date().toISOString();
     const updated: Opportunity = { ...current, ...updates };
 
-    db.prepare(`
+    await db.execute(`
       UPDATE opportunities SET
         title = ?,
         company = ?,
@@ -235,7 +244,7 @@ export const oppService = {
         status = ?,
         updated_at = ?
       WHERE id = ?
-    `).run(
+    `, [
       updated.title,
       updated.company,
       updated.companyLogo || null,
@@ -251,12 +260,12 @@ export const oppService = {
       updated.status,
       now,
       id
-    );
+    ]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -267,8 +276,9 @@ export const oppService = {
       id,
       `Modified opportunity ${id}: "${updated.title}" at ${updated.company}`,
       'success'
-    );
+    ]);
 
-    return this.getOpportunityById(id)!;
+    const opp = await this.getOpportunityById(id);
+    return opp!;
   },
 };

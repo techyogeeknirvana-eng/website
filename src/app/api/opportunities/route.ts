@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-    const { items, total } = oppService.listOpportunities({
+    const { items, total } = await oppService.listOpportunities({
       status,
       type,
       search,
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized', 401);
     }
@@ -48,11 +48,11 @@ export async function POST(req: NextRequest) {
 
     if (action === 'save') {
       if (!opportunityId) return apiError('opportunityId required', 400);
-      const isSaved = oppService.toggleSave(opportunityId, authUser.id);
+      const isSaved = await oppService.toggleSave(opportunityId, authUser.id);
       return apiSuccess({ isSaved });
     }
 
-    const created = oppService.createOpportunity(body, authUser);
+    const created = await oppService.createOpportunity(body, authUser);
     return apiSuccess(created, 201);
   } catch (err: any) {
     return apiError(err.message || 'Failed to create opportunity', 400);
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Admin authorization required.', 403);
     }
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest) {
 
     // 1. Modify full opportunity details
     if (action === 'modify' || updates) {
-      const updated = oppService.updateOpportunity(id, updates || body, authUser);
+      const updated = await oppService.updateOpportunity(id, updates || body, authUser);
       return apiSuccess(updated);
     }
 
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
       return apiError('status or updates required', 400);
     }
 
-    const updated = oppService.reviewOpportunity(id, status, authUser, rejectionReason);
+    const updated = await oppService.reviewOpportunity(id, status, authUser, rejectionReason);
     return apiSuccess(updated);
   } catch (err: any) {
     return apiError(err.message || 'Failed to update opportunity', 400);
@@ -93,7 +93,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Admin authorization required.', 403);
     }
@@ -112,7 +112,7 @@ export async function DELETE(req: NextRequest) {
       return apiError('Opportunity id required', 400);
     }
 
-    const deleted = oppService.deleteOpportunity(id, authUser);
+    const deleted = await oppService.deleteOpportunity(id, authUser);
     if (!deleted) {
       return apiError('Opportunity not found or already deleted', 404);
     }

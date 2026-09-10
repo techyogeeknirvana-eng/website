@@ -7,7 +7,7 @@ import { isValidEmail } from '@/lib/server/middleware/validator';
 
 export async function GET(req: NextRequest) {
   try {
-    const user = extractAuthUser(req, true);
+    const user = await extractAuthUser(req, true);
     if (!user) {
       return apiSuccess({ user: null, wallet: null, isAuthenticated: false, isSuspended: false });
     }
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       return response;
     }
 
-    const wallet = creditService.getOrCreateWallet(user.id);
+    const wallet = await creditService.getOrCreateWallet(user.id);
     return apiSuccess({
       user,
       wallet,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
       return banResponse;
     }
 
-    const wallet = creditService.getOrCreateWallet(result.user.id);
+    const wallet = await creditService.getOrCreateWallet(result.user.id);
     const response = apiSuccess({
       user: result.user,
       wallet,
@@ -119,7 +119,7 @@ export async function DELETE(req: NextRequest) {
   try {
     const token = req.cookies.get('tygn_session_token')?.value;
     if (token) {
-      authService.logoutSession(token);
+      await authService.logoutSession(token);
     }
 
     const response = apiSuccess({ loggedOut: true });

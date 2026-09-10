@@ -5,7 +5,7 @@ import { apiSuccess, apiError } from '@/lib/server/utils/response';
 
 export async function GET(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     const { searchParams } = new URL(req.url);
     const requestedUserId = searchParams.get('userId') || authUser?.id;
     const clientDate = searchParams.get('clientDate') || undefined;
@@ -14,8 +14,8 @@ export async function GET(req: NextRequest) {
       return apiError('User ID required', 400);
     }
 
-    const wallet = creditService.getOrCreateWallet(requestedUserId, clientDate);
-    const transactions = creditService.getTransactions(requestedUserId, 20);
+    const wallet = await creditService.getOrCreateWallet(requestedUserId, clientDate);
+    const transactions = await creditService.getTransactions(requestedUserId, 20);
 
     return apiSuccess({ wallet, transactions });
   } catch (err: any) {
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized', 401);
     }
@@ -37,11 +37,11 @@ export async function POST(req: NextRequest) {
     if (action === 'daily_reset') {
       if (authUser.role === 'ADMIN') {
         if (targetUserId) {
-          const updatedWallet = creditService.resetUserDailyCredits(targetUserId, Boolean(force), clientDate);
+          const updatedWallet = await creditService.resetUserDailyCredits(targetUserId, Boolean(force), clientDate);
           return apiSuccess({ wallet: updatedWallet, message: 'User daily credits reset to 10.' });
         } else {
-          const result = creditService.resetAllDailyCredits(Boolean(force), clientDate);
-          const callerWallet = creditService.getOrCreateWallet(authUser.id, clientDate);
+          const result = await creditService.resetAllDailyCredits(Boolean(force), clientDate);
+          const callerWallet = await creditService.getOrCreateWallet(authUser.id, clientDate);
           return apiSuccess({
             wallet: callerWallet,
             count: result.count,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } else {
-        const updatedWallet = creditService.resetUserDailyCredits(authUser.id, Boolean(force), clientDate);
+        const updatedWallet = await creditService.resetUserDailyCredits(authUser.id, Boolean(force), clientDate);
         return apiSuccess({ wallet: updatedWallet, message: 'Daily credits reset to 10.' });
       }
     }
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       if (!targetUserId) {
         return apiError('targetUserId required for admin adjustment.', 400);
       }
-      const updatedWallet = creditService.adjustCreditsAdmin(
+      const updatedWallet = await creditService.adjustCreditsAdmin(
         targetUserId,
         parseInt(deltaDaily, 10) || 0,
         parseInt(deltaPersistent, 10) || 0,
@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
       return apiSuccess({ wallet: updatedWallet });
     }
 
-    // 2. Standard Credit Deduction
+    // 3. Standard Credit Deduction
     const deductAmount = parseInt(amount, 10) || 1;
-    const res = creditService.deductCredits(
+    const res = await creditService.deductCredits(
       authUser.id,
       deductAmount,
       description || 'Platform feature usage',

@@ -1,4 +1,4 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { signAuthToken } from '../middleware/authGuard';
@@ -22,12 +22,11 @@ export const authService = {
     ip?: string,
     userAgent?: string
   ): Promise<{ user: User; token: string }> {
-    const db = getDatabase();
     const cleanEmail = email.toLowerCase().trim();
 
-    const row = db.prepare(`
+    const row = await db.queryOne(`
       SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL
-    `).get(cleanEmail) as any;
+    `, [cleanEmail]);
 
     if (!row) {
       throw new Error('Invalid email or password.');
@@ -42,7 +41,11 @@ export const authService = {
       throw new Error('Invalid email or password.');
     }
 
-    const user = userService.getUserById(row.id)!;
+    const user = await userService.getUserById(row.id);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
     if (user.isSuspended || row.is_suspended === 1) {
       throw new Error(`Account Banned: This account (${cleanEmail}) has been suspended by a platform administrator. You cannot log in.`);
     }
@@ -59,13 +62,13 @@ export const authService = {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(sessionId, row.id, tokenHash, ip || null, userAgent || null, expiresAt, new Date().toISOString());
+    `, [sessionId, row.id, tokenHash, ip || null, userAgent || null, expiresAt, new Date().toISOString()]);
 
     // Ensure wallet is initialized and reset if needed
-    creditService.getOrCreateWallet(user.id);
+    await creditService.getOrCreateWallet(user.id);
 
     return { user, token };
   },
@@ -81,11 +84,10 @@ export const authService = {
     ip?: string,
     userAgent?: string
   ): Promise<{ user: User; token: string }> {
-    const db = getDatabase();
     const cleanEmail = data.email.toLowerCase().trim();
 
     // Check duplicate email
-    const existingEmail = db.prepare('SELECT id, is_suspended FROM users WHERE LOWER(email) = ?').get(cleanEmail) as any;
+    const existingEmail = await db.queryOne('SELECT id, is_suspended FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (existingEmail) {
       if (existingEmail.is_suspended === 1) {
         throw new Error(`Account Banned: The account (${cleanEmail}) has been suspended by an administrator. You cannot register or log in.`);
@@ -103,7 +105,7 @@ export const authService = {
     // Ensure unique username
     let finalUsername = candidateUsername;
     let counter = 1;
-    while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+    while (await db.queryOne('SELECT id FROM users WHERE username = ?', [finalUsername])) {
       finalUsername = `${candidateUsername}_${counter++}`;
     }
 
@@ -113,7 +115,7 @@ export const authService = {
     const referralCode = userService.generateReferralCode(finalUsername);
     const now = new Date().toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO users (
         id, name, username, email, password_hash, avatar, role, title, college_or_company,
         education, skills, interests, github, linkedin, experience_level, xp, level,
@@ -125,7 +127,7 @@ export const authService = {
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?
       )
-    `).run(
+    `, [
       userId,
       displayName,
       finalUsername,
@@ -152,14 +154,14 @@ export const authService = {
       0,
       now,
       now
-    );
+    ]);
 
     // Initialize 10 daily credits in wallet
-    creditService.getOrCreateWallet(userId);
+    await creditService.getOrCreateWallet(userId);
 
     // Process referral bonus if code given
     if (data.referredByCode) {
-      creditService.processReferral(userId, cleanEmail, data.referredByCode);
+      await creditService.processReferral(userId, cleanEmail, data.referredByCode);
     }
 
     // Generate session token
@@ -174,13 +176,13 @@ export const authService = {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(sessionId, userId, tokenHash, ip || null, userAgent || null, expiresAt, now);
+    `, [sessionId, userId, tokenHash, ip || null, userAgent || null, expiresAt, now]);
 
-    const user = userService.getUserById(userId)!;
-    return { user, token };
+    const user = await userService.getUserById(userId);
+    return { user: user!, token };
   },
 
   async loginOrSyncGoogle(
@@ -191,11 +193,10 @@ export const authService = {
     ip?: string,
     userAgent?: string
   ): Promise<{ user: User; token: string }> {
-    const db = getDatabase();
     const cleanEmail = email.toLowerCase().trim();
     const now = new Date().toISOString();
 
-    let user = userService.getUserByEmail(cleanEmail);
+    let user = await userService.getUserByEmail(cleanEmail);
 
     if (user && user.isSuspended) {
       throw new Error(`Account Banned: The account (${cleanEmail}) has been suspended by an administrator. You cannot log in.`);
@@ -211,14 +212,14 @@ export const authService = {
       if (!candidateUsername) candidateUsername = 'user';
       let finalUsername = candidateUsername;
       let counter = 1;
-      while (db.prepare('SELECT id FROM users WHERE username = ?').get(finalUsername)) {
+      while (await db.queryOne('SELECT id FROM users WHERE username = ?', [finalUsername])) {
         finalUsername = `${candidateUsername}_${counter++}`;
       }
 
       const referralCode = userService.generateReferralCode(finalUsername);
       const userAvatar = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0284c7&color=fff&bold=true`;
 
-      db.prepare(`
+      await db.execute(`
         INSERT INTO users (
           id, name, username, email, password_hash, avatar, role, title, college_or_company,
           education, skills, interests, github, linkedin, experience_level, xp, level,
@@ -230,7 +231,7 @@ export const authService = {
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?
         )
-      `).run(
+      `, [
         userId,
         displayName,
         finalUsername,
@@ -257,84 +258,83 @@ export const authService = {
         0,
         now,
         now
-      );
+      ]);
 
-      creditService.getOrCreateWallet(userId);
+      await creditService.getOrCreateWallet(userId);
 
       if (referredByCode) {
-        creditService.processReferral(userId, cleanEmail, referredByCode);
+        await creditService.processReferral(userId, cleanEmail, referredByCode);
       }
 
-      user = userService.getUserById(userId)!;
+      user = await userService.getUserById(userId);
     } else {
       // If user exists and is in global admin list, elevate role
       if (isGlobalAdminEmail(cleanEmail) && user.role !== 'ADMIN') {
-        db.prepare(`UPDATE users SET role = 'ADMIN', updated_at = ? WHERE id = ?`).run(now, user.id);
+        await db.execute(`UPDATE users SET role = 'ADMIN', updated_at = ? WHERE id = ?`, [now, user.id]);
         user.role = 'ADMIN';
       }
       // Update name if name provided from Google or if user name needs sync
       const targetName = formatNameFromEmail(cleanEmail, name);
       if (targetName && targetName !== user.name) {
-        db.prepare(`UPDATE users SET name = ?, updated_at = ? WHERE id = ?`).run(targetName, now, user.id);
+        await db.execute(`UPDATE users SET name = ?, updated_at = ? WHERE id = ?`, [targetName, now, user.id]);
         user.name = targetName;
       }
 
       // Sync username to Google handle / email prefix if legacy
       const expectedUsername = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (expectedUsername && (user.username === 'ishpreet_admin' || !user.username)) {
-        db.prepare(`UPDATE users SET username = ?, updated_at = ? WHERE id = ?`).run(expectedUsername, now, user.id);
+        await db.execute(`UPDATE users SET username = ?, updated_at = ? WHERE id = ?`, [expectedUsername, now, user.id]);
         user.username = expectedUsername;
       }
 
       // Google OAuth avatar sync: if Google provides an avatar, update immediately
       if (avatar && (avatar !== user.avatar || !user.avatar || user.avatar.includes('unsplash.com') || user.avatar.includes('tygn-logo.png'))) {
-        db.prepare(`UPDATE users SET avatar = ?, updated_at = ? WHERE id = ?`).run(avatar, now, user.id);
+        await db.execute(`UPDATE users SET avatar = ?, updated_at = ? WHERE id = ?`, [avatar, now, user.id]);
         user.avatar = avatar;
       }
 
       // Ensure user has a referral code
       if (!user.referralCode) {
         const generatedCode = userService.generateReferralCode(user.username);
-        db.prepare(`UPDATE users SET referral_code = ?, updated_at = ? WHERE id = ?`).run(generatedCode, now, user.id);
+        await db.execute(`UPDATE users SET referral_code = ?, updated_at = ? WHERE id = ?`, [generatedCode, now, user.id]);
         user.referralCode = generatedCode;
       }
 
       // Process referral if user was not previously referred
       if (referredByCode && !user.referredBy) {
-        creditService.processReferral(user.id, cleanEmail, referredByCode);
-        user = userService.getUserById(user.id)!;
+        await creditService.processReferral(user.id, cleanEmail, referredByCode);
+        user = (await userService.getUserById(user.id))!;
       }
 
-      creditService.getOrCreateWallet(user.id);
+      await creditService.getOrCreateWallet(user.id);
     }
 
-    if (user.isSuspended) {
+    if (user!.isSuspended) {
       throw new Error(`Account Banned: The account (${cleanEmail}) has been suspended by a platform administrator. You cannot log in.`);
     }
 
     // Generate Session
     const sessionId = 'sess_' + crypto.randomUUID();
     const token = signAuthToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
+      userId: user!.id,
+      email: user!.email,
+      role: user!.role,
       sessionId,
     });
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO user_sessions (id, user_id, token_hash, ip_address, user_agent, expires_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(sessionId, user.id, tokenHash, ip || null, userAgent || null, expiresAt, now);
+    `, [sessionId, user!.id, tokenHash, ip || null, userAgent || null, expiresAt, now]);
 
-    return { user, token };
+    return { user: user!, token };
   },
 
-  logoutSession(token: string): void {
-    const db = getDatabase();
+  async logoutSession(token: string): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    db.prepare('DELETE FROM user_sessions WHERE token_hash = ?').run(tokenHash);
+    await db.execute('DELETE FROM user_sessions WHERE token_hash = ?', [tokenHash]);
   },
 };

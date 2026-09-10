@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-    const { items, total } = eventService.listEvents({
+    const { items, total } = await eventService.listEvents({
       status,
       category,
       search,
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized', 401);
     }
@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
 
     if (action === 'rsvp') {
       if (!eventId) return apiError('eventId required', 400);
-      const isRegistered = eventService.toggleRSVP(eventId, authUser.id);
+      const isRegistered = await eventService.toggleRSVP(eventId, authUser.id);
       return apiSuccess({ isRegistered });
     }
 
-    const created = eventService.createEvent(body, authUser);
+    const created = await eventService.createEvent(body, authUser);
     return apiSuccess(created, 201);
   } catch (err: any) {
     return apiError(err.message || 'Failed to create event', 400);
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Admin authorization required.', 403);
     }
@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest) {
 
     // 1. Modify full event details
     if (action === 'modify' || updates) {
-      const updated = eventService.updateEvent(id, updates || body, authUser);
+      const updated = await eventService.updateEvent(id, updates || body, authUser);
       return apiSuccess(updated);
     }
 
@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest) {
       return apiError('status or updates required', 400);
     }
 
-    const updated = eventService.reviewEvent(id, status, authUser, rejectionReason);
+    const updated = await eventService.reviewEvent(id, status, authUser, rejectionReason);
     return apiSuccess(updated);
   } catch (err: any) {
     return apiError(err.message || 'Failed to update event', 400);
@@ -91,7 +91,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Admin authorization required.', 403);
     }
@@ -110,7 +110,7 @@ export async function DELETE(req: NextRequest) {
       return apiError('Event id required', 400);
     }
 
-    const deleted = eventService.deleteEvent(id, authUser);
+    const deleted = await eventService.deleteEvent(id, authUser);
     if (!deleted) {
       return apiError('Event not found or already deleted', 404);
     }

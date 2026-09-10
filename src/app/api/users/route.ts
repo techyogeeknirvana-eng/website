@@ -5,7 +5,7 @@ import { apiSuccess, apiError } from '@/lib/server/utils/response';
 
 export async function GET(req: NextRequest) {
   try {
-    const users = userService.getAllUsers();
+    const users = await userService.getAllUsers();
     return apiSuccess(users);
   } catch (err: any) {
     return apiError(err.message || 'Failed to fetch users', 500);
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized. Please log in.', 401);
     }
@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetUserId || !role) {
         return apiError('targetUserId and role are required.', 400);
       }
-      userService.changeRole(targetUserId, role, authUser);
+      await userService.changeRole(targetUserId, role, authUser);
       return apiSuccess({ success: true, message: `Role changed to ${role}` });
     }
 
@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
         return apiError('targetUserId is required.', 400);
       }
       const explicitStatus = suspend !== undefined ? Boolean(suspend) : undefined;
-      const isSuspended = userService.toggleSuspend(targetUserId, authUser, explicitStatus);
+      const isSuspended = await userService.toggleSuspend(targetUserId, authUser, explicitStatus);
       return apiSuccess({ success: true, isSuspended });
     }
 
@@ -55,12 +55,12 @@ export async function PATCH(req: NextRequest) {
       if (!targetUserId) {
         return apiError('targetUserId is required.', 400);
       }
-      const updated = userService.adminUpdateUser(targetUserId, updates || {}, authUser);
+      const updated = await userService.adminUpdateUser(targetUserId, updates || {}, authUser);
       return apiSuccess(updated);
     }
 
     // 4. Update Own Profile
-    const updated = userService.updateUser(authUser.id, updates || {});
+    const updated = await userService.updateUser(authUser.id, updates || {});
     return apiSuccess(updated);
   } catch (err: any) {
     return apiError(err.message || 'Failed to update user', 400);
@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Admin access required.', 403);
     }
@@ -88,7 +88,7 @@ export async function DELETE(req: NextRequest) {
       return apiError('targetUserId is required.', 400);
     }
 
-    userService.deleteUser(targetUserId, authUser);
+    await userService.deleteUser(targetUserId, authUser);
     return apiSuccess({ success: true, message: 'User account deleted successfully.' });
   } catch (err: any) {
     return apiError(err.message || 'Failed to delete user', 400);

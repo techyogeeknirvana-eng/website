@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const BOOT_STEPS = [
   '[ OK ] init.kernel  ............... TYGN.OS v4.2.0',
@@ -26,54 +26,84 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
   const [isClosing, setIsClosing] = useState(false);
   const [visible, setVisible] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const handleDismiss = useCallback(() => {
+    setIsClosing(true);
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('tygn_startup_shown', 'true');
+      }
+    } catch (_) {}
+    setTimeout(() => {
+      setVisible(false);
+      if (onCompleteRef.current) onCompleteRef.current();
+    }, 250);
+  }, []);
+
+  // Listen for Escape key to quickly skip
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleDismiss();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDismiss]);
 
   // Check sessionStorage if already shown in this session (unless forced)
   useEffect(() => {
     if (!forceShow && typeof window !== 'undefined') {
-      const alreadyShown = sessionStorage.getItem('tygn_startup_shown');
-      if (alreadyShown) {
-        setVisible(false);
-        if (onComplete) onComplete();
-        return;
-      }
+      try {
+        const alreadyShown = sessionStorage.getItem('tygn_startup_shown');
+        if (alreadyShown) {
+          setVisible(false);
+          if (onCompleteRef.current) onCompleteRef.current();
+          return;
+        }
+      } catch (_) {}
     }
-  }, [forceShow, onComplete]);
+  }, [forceShow]);
 
-  // Step typing and progress
+  // Failsafe auto-dismiss: Never stay open longer than 2.8 seconds under any circumstances
+  useEffect(() => {
+    if (!visible) return;
+    const safetyTimer = setTimeout(() => {
+      handleDismiss();
+    }, 2800);
+    return () => clearTimeout(safetyTimer);
+  }, [visible, handleDismiss]);
+
+  // Step typing and progress advance
   useEffect(() => {
     if (!visible) return;
 
     if (stepIndex < BOOT_STEPS.length) {
       const stepTimer = setTimeout(() => {
         setStepIndex((prev) => prev + 1);
-      }, 200);
+      }, 150);
       return () => clearTimeout(stepTimer);
     }
 
-    // Finished all steps -> exit
+    // Finished all steps -> exit smoothly
     const exitTimer = setTimeout(() => {
-      setIsClosing(true);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('tygn_startup_shown', 'true');
-      }
-      setTimeout(() => {
-        setVisible(false);
-        if (onComplete) onComplete();
-      }, 650);
-    }, 550);
+      handleDismiss();
+    }, 350);
 
     return () => clearTimeout(exitTimer);
-  }, [stepIndex, visible, onComplete]);
+  }, [stepIndex, visible, handleDismiss]);
 
   // Smooth lerp progress calculation
   useEffect(() => {
     if (!visible) return;
     const progressInterval = setInterval(() => {
       setProgress((curr) => {
-        const target = (stepIndex / BOOT_STEPS.length) * 100;
-        return curr + (target - curr) * 0.22;
+        const target = Math.min(100, Math.round(((stepIndex + 1) / BOOT_STEPS.length) * 100));
+        return curr + (target - curr) * 0.35;
       });
-    }, 40);
+    }, 30);
     return () => clearInterval(progressInterval);
   }, [stepIndex, visible]);
 
@@ -95,11 +125,11 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
 
     const glyphs = 'ァアイウエオカキクケコサシスセソタチツテトナニヌネノ01アイウエオ#$%&*+-=<>'.split('');
     const fontSize = 14;
-    const columns = Math.floor(canvas.width / fontSize);
+    const columns = Math.max(1, Math.floor(canvas.width / fontSize));
     const drops = Array(columns).fill(1);
 
     const renderMatrix = () => {
-      ctx.fillStyle = 'rgba(5, 7, 18, 0.09)';
+      ctx.fillStyle = 'rgba(5, 7, 18, 0.12)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       for (let i = 0; i < drops.length; i++) {
@@ -143,9 +173,9 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'opacity 0.65s ease, filter 0.65s ease',
+        transition: 'opacity 0.25s ease, filter 0.25s ease',
         opacity: isClosing ? 0 : 1,
-        filter: isClosing ? 'blur(22px)' : 'none',
+        filter: isClosing ? 'blur(12px)' : 'none',
         pointerEvents: isClosing ? 'none' : 'auto',
       }}
     >
@@ -411,7 +441,7 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
               lineHeight: 1.8,
             }}
           >
-            {BOOT_STEPS.slice(0, stepIndex).map((line, idx) => (
+            {BOOT_STEPS.slice(0, Math.max(1, stepIndex)).map((line, idx) => (
               <div
                 key={idx}
                 style={{
@@ -472,7 +502,7 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
                 top: 0,
                 bottom: 0,
                 left: 0,
-                width: `${progress}%`,
+                width: `${Math.max(5, progress)}%`,
                 background: 'linear-gradient(90deg, #38bdf8 0%, #67e8f9 50%, #818cf8 100%)',
                 boxShadow: '0 0 16px rgba(99,102,241,0.85)',
                 transition: 'width 0.15s ease',
@@ -483,35 +513,27 @@ export function LaunchScreen({ onComplete, forceShow = false }: LaunchScreenProp
 
         {/* Fast-forward Skip option */}
         <button
-          onClick={() => {
-            setIsClosing(true);
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('tygn_startup_shown', 'true');
-            }
-            setTimeout(() => {
-              setVisible(false);
-              if (onComplete) onComplete();
-            }, 300);
-          }}
+          onClick={handleDismiss}
           style={{
             marginTop: '20px',
-            background: 'transparent',
-            border: '1px solid rgba(34,211,238,0.2)',
+            background: 'rgba(34,211,238,0.08)',
+            border: '1px solid rgba(34,211,238,0.4)',
             borderRadius: '20px',
-            padding: '4px 14px',
-            color: 'rgba(103,232,249,0.6)',
-            fontSize: '10px',
+            padding: '6px 18px',
+            color: '#cffafe',
+            fontSize: '11px',
+            fontWeight: 600,
             letterSpacing: '0.15em',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(34,211,238,0.5)';
-            e.currentTarget.style.color = '#cffafe';
+            e.currentTarget.style.borderColor = 'rgba(34,211,238,0.8)';
+            e.currentTarget.style.backgroundColor = 'rgba(34,211,238,0.18)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(34,211,238,0.2)';
-            e.currentTarget.style.color = 'rgba(103,232,249,0.6)';
+            e.currentTarget.style.borderColor = 'rgba(34,211,238,0.4)';
+            e.currentTarget.style.backgroundColor = 'rgba(34,211,238,0.08)';
           }}
         >
           [ SKIP INTRO → ]

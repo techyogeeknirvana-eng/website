@@ -7,7 +7,6 @@ import { Footer } from '@/components/layout/Footer';
 import { NirvanaAIChatbot } from '@/components/ai/NirvanaAIChatbot';
 import { CommandPalette } from '@/components/command/CommandPalette';
 import { LeftSideThemeToggle } from '@/components/common/LeftSideThemeToggle';
-import { LaunchScreen } from '@/components/common/LaunchScreen';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { BroadcastModal } from '@/components/announcements/BroadcastModal';
 
@@ -51,7 +50,6 @@ export default function RootLayout({
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <AuthProvider>
           <RouteGuard>
-            <LaunchScreen />
             <Navbar />
             <main style={{ minHeight: 'calc(100vh - 68px)' }}>
               {children}

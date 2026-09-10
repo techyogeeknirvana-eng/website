@@ -1,6 +1,16 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { User, UserRole } from '@/types';
 import crypto from 'crypto';
+
+function safeParseJson(val: any, fallback: any = []): any {
+  if (!val) return fallback;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch (_) {
+    return fallback;
+  }
+}
 
 export const userService = {
   mapRowToUser(row: any): User {
@@ -16,15 +26,15 @@ export const userService = {
       title: row.title || '',
       collegeOrCompany: row.college_or_company || '',
       education: row.education || '',
-      skills: JSON.parse(row.skills || '[]'),
-      interests: JSON.parse(row.interests || '[]'),
+      skills: safeParseJson(row.skills, []),
+      interests: safeParseJson(row.interests, []),
       github: row.github || '',
       linkedin: row.linkedin || '',
       portfolio: row.portfolio || '',
       experienceLevel: row.experience_level || 'Beginner',
       xp: row.xp || 0,
       level: row.level || 'Novice',
-      badges: JSON.parse(row.badges || '[]'),
+      badges: safeParseJson(row.badges, []),
       bio: row.bio || '',
       createdAt: row.created_at,
       isSuspended: Boolean(row.is_suspended),
@@ -36,39 +46,34 @@ export const userService = {
     };
   },
 
-  getUserById(id: string): User | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').get(id);
+  async getUserById(id: string): Promise<User | null> {
+    const row = await db.queryOne('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL', [id]);
     return row ? this.mapRowToUser(row) : null;
   },
 
-  getUserByEmail(email: string): User | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL').get(email.toLowerCase().trim());
+  async getUserByEmail(email: string): Promise<User | null> {
+    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL', [email.toLowerCase().trim()]);
     return row ? this.mapRowToUser(row) : null;
   },
 
-  getUserByUsername(username: string): User | null {
-    const db = getDatabase();
-    const row = db.prepare('SELECT * FROM users WHERE LOWER(username) = ? AND deleted_at IS NULL').get(username.toLowerCase().trim());
+  async getUserByUsername(username: string): Promise<User | null> {
+    const row = await db.queryOne('SELECT * FROM users WHERE LOWER(username) = ? AND deleted_at IS NULL', [username.toLowerCase().trim()]);
     return row ? this.mapRowToUser(row) : null;
   },
 
-  getAllUsers(): User[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC').all();
+  async getAllUsers(): Promise<User[]> {
+    const rows = await db.queryAll('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC');
     return rows.map((r) => this.mapRowToUser(r));
   },
 
-  updateUser(id: string, updates: Partial<User>): User {
-    const db = getDatabase();
-    const current = this.getUserById(id);
+  async updateUser(id: string, updates: Partial<User>): Promise<User> {
+    const current = await this.getUserById(id);
     if (!current) throw new Error('User not found.');
 
     const now = new Date().toISOString();
     const updated = { ...current, ...updates };
 
-    db.prepare(`
+    await db.execute(`
       UPDATE users SET
         name = ?,
         avatar = ?,
@@ -84,7 +89,7 @@ export const userService = {
         bio = ?,
         updated_at = ?
       WHERE id = ?
-    `).run(
+    `, [
       updated.name,
       updated.avatar,
       updated.title,
@@ -99,18 +104,18 @@ export const userService = {
       updated.bio,
       now,
       id
-    );
+    ]);
 
-    return this.getUserById(id)!;
+    const refreshed = await this.getUserById(id);
+    return refreshed!;
   },
 
-  changeRole(targetUserId: string, newRole: UserRole, adminUser: User): void {
-    const db = getDatabase();
-    let target = this.getUserById(targetUserId);
+  async changeRole(targetUserId: string, newRole: UserRole, adminUser: User): Promise<void> {
+    let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(targetUserId, targetUserId) as any;
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
       if (byEmail) {
-        target = this.getUserById(byEmail.id);
+        target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
@@ -121,12 +126,12 @@ export const userService = {
     }
 
     const now = new Date().toISOString();
-    db.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?').run(newRole, now, targetUserId);
+    await db.execute('UPDATE users SET role = ?, updated_at = ? WHERE id = ?', [newRole, now, targetUserId]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -137,16 +142,15 @@ export const userService = {
       targetUserId,
       `Changed user role to ${newRole} for ${target.name} (${target.email})`,
       'success'
-    );
+    ]);
   },
 
-  toggleSuspend(targetUserId: string, adminUser: User, explicitStatus?: boolean): boolean {
-    const db = getDatabase();
-    let target = this.getUserById(targetUserId);
+  async toggleSuspend(targetUserId: string, adminUser: User, explicitStatus?: boolean): Promise<boolean> {
+    let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(targetUserId, targetUserId) as any;
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
       if (byEmail) {
-        target = this.getUserById(byEmail.id);
+        target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
@@ -163,17 +167,17 @@ export const userService = {
     const newSuspended = explicitStatus !== undefined ? (explicitStatus ? 1 : 0) : (target.isSuspended ? 0 : 1);
     const now = new Date().toISOString();
 
-    db.prepare('UPDATE users SET is_suspended = ?, updated_at = ? WHERE id = ?').run(newSuspended, now, targetUserId);
+    await db.execute('UPDATE users SET is_suspended = ?, updated_at = ? WHERE id = ?', [newSuspended, now, targetUserId]);
 
     // If suspending, immediately revoke all active sessions for this user
     if (newSuspended === 1) {
-      db.prepare('DELETE FROM user_sessions WHERE user_id = ?').run(targetUserId);
+      await db.execute('DELETE FROM user_sessions WHERE user_id = ?', [targetUserId]);
     }
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -184,18 +188,17 @@ export const userService = {
       targetUserId,
       `${newSuspended ? 'Suspended (Banned)' : 'Restored'} access for user ${target.name} (${target.email})`,
       'warning'
-    );
+    ]);
 
     return Boolean(newSuspended);
   },
 
-  deleteUser(targetUserId: string, adminUser: User): boolean {
-    const db = getDatabase();
-    let target = this.getUserById(targetUserId);
+  async deleteUser(targetUserId: string, adminUser: User): Promise<boolean> {
+    let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(targetUserId, targetUserId) as any;
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
       if (byEmail) {
-        target = this.getUserById(byEmail.id);
+        target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
@@ -210,13 +213,13 @@ export const userService = {
     }
 
     const now = new Date().toISOString();
-    db.prepare('UPDATE users SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, targetUserId);
-    db.prepare('DELETE FROM user_sessions WHERE user_id = ?').run(targetUserId);
+    await db.execute('UPDATE users SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, targetUserId]);
+    await db.execute('DELETE FROM user_sessions WHERE user_id = ?', [targetUserId]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -227,18 +230,17 @@ export const userService = {
       targetUserId,
       `Deleted user account for ${target.name} (${target.email})`,
       'warning'
-    );
+    ]);
 
     return true;
   },
 
-  adminUpdateUser(targetUserId: string, updates: Partial<User>, adminUser: User): User {
-    const db = getDatabase();
-    let target = this.getUserById(targetUserId);
+  async adminUpdateUser(targetUserId: string, updates: Partial<User>, adminUser: User): Promise<User> {
+    let target = await this.getUserById(targetUserId);
     if (!target) {
-      const byEmail = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(targetUserId, targetUserId) as any;
+      const byEmail = await db.queryOne<{ id: string }>('SELECT id FROM users WHERE email = ? OR username = ?', [targetUserId, targetUserId]);
       if (byEmail) {
-        target = this.getUserById(byEmail.id);
+        target = await this.getUserById(byEmail.id);
         targetUserId = byEmail.id;
       }
     }
@@ -247,7 +249,7 @@ export const userService = {
     const now = new Date().toISOString();
     const updated = { ...target, ...updates };
 
-    db.prepare(`
+    await db.execute(`
       UPDATE users SET
         name = ?,
         avatar = ?,
@@ -265,7 +267,7 @@ export const userService = {
         bio = ?,
         updated_at = ?
       WHERE id = ?
-    `).run(
+    `, [
       updated.name,
       updated.avatar,
       updated.role,
@@ -282,12 +284,12 @@ export const userService = {
       updated.bio || '',
       now,
       targetUserId
-    );
+    ]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -298,9 +300,10 @@ export const userService = {
       targetUserId,
       `Admin updated profile for ${updated.name} (${updated.email})`,
       'success'
-    );
+    ]);
 
-    return this.getUserById(targetUserId)!;
+    const refreshed = await this.getUserById(targetUserId);
+    return refreshed!;
   },
 
   generateReferralCode(username: string): string {

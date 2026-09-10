@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { User } from '@/types';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'tygn_prod_secret_auth_token_key_2026_secure';
@@ -26,9 +26,7 @@ export function verifyAuthToken(token: string): TokenPayload | null {
   }
 }
 
-export function extractAuthUser(request: NextRequest, allowSuspended: boolean = false): User | null {
-  const db = getDatabase();
-
+export async function extractAuthUser(request: NextRequest, allowSuspended: boolean = false): Promise<User | null> {
   // 1. Try Cookie
   const cookieToken = request.cookies.get('tygn_session_token')?.value;
   // 2. Try Authorization Header
@@ -42,14 +40,15 @@ export function extractAuthUser(request: NextRequest, allowSuspended: boolean = 
     const payload = verifyAuthToken(token);
     if (payload && payload.userId) {
       if (payload.sessionId) {
-        const sessionExists = db.prepare('SELECT id FROM user_sessions WHERE id = ?').get(payload.sessionId);
+        const sessionExists = await db.queryOne('SELECT id FROM user_sessions WHERE id = ?', [payload.sessionId]);
         if (!sessionExists) {
           return null; // Session revoked in DB (e.g. on user suspension or logout)
         }
       }
-      targetRow = db.prepare(`
-        SELECT * FROM users WHERE id = ? AND deleted_at IS NULL
-      `).get(payload.userId) as any;
+      targetRow = await db.queryOne(
+        'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
+        [payload.userId]
+      );
     }
   }
 
@@ -59,10 +58,13 @@ export function extractAuthUser(request: NextRequest, allowSuspended: boolean = 
     const userEmailHeader = request.headers.get('x-user-email');
 
     if (userIdHeader) {
-      targetRow = db.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').get(userIdHeader) as any;
+      targetRow = await db.queryOne('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL', [userIdHeader]);
     }
     if (!targetRow && userEmailHeader) {
-      targetRow = db.prepare('SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL').get(userEmailHeader.toLowerCase().trim()) as any;
+      targetRow = await db.queryOne(
+        'SELECT * FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL',
+        [userEmailHeader.toLowerCase().trim()]
+      );
     }
   }
 

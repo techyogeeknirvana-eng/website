@@ -146,9 +146,6 @@ export default function HomePage() {
 
   return (
     <div className="premium-shell text-slate-100">
-      {/* Launch Screen (Startup Neural Boot) */}
-      <LaunchScreen />
-
       {/* Manual Rerun Launch Screen Modal */}
       {showRerunLaunch && (
         <LaunchScreen

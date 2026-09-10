@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return banResponse;
     }
 
-    const wallet = creditService.getOrCreateWallet(result.user.id);
+    const wallet = await creditService.getOrCreateWallet(result.user.id);
 
     const response = apiSuccess({
       user: result.user,

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getDatabase } from '@/lib/server/db/client';
+import { db } from '@/lib/server/db/client';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 import { LiveSession, LiveParticipant, LiveResponse } from '@/types';
 
@@ -12,14 +12,13 @@ export async function GET(req: NextRequest) {
       return apiError('Session PIN code is required', 400);
     }
 
-    const db = getDatabase();
-    const row = db.prepare('SELECT session_data FROM live_sessions WHERE code = ?').get(code) as any;
+    const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [code]);
 
     if (!row || !row.session_data) {
       return apiError('Session not found. Please verify the 6-digit PIN.', 404);
     }
 
-    const session: LiveSession = JSON.parse(row.session_data);
+    const session: LiveSession = typeof row.session_data === 'object' ? row.session_data : JSON.parse(row.session_data);
     return apiSuccess(session);
   } catch (err: any) {
     return apiError(err.message || 'Failed to fetch live session', 500);
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { action, session, code, participant, selectedOption, textResponse, timeTaken = 5, status, nextSlideIndex } = body;
-    const db = getDatabase();
     const now = new Date().toISOString();
 
     // 1. Create or Full Sync
@@ -42,35 +40,35 @@ export async function POST(req: NextRequest) {
       const sessionCode = session.code.trim();
       let validQuizId: string | null = null;
       if (session.quiz?.id) {
-        const quizExists = db.prepare('SELECT id FROM quizzes WHERE id = ?').get(session.quiz.id);
+        const quizExists = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [session.quiz.id]);
         if (quizExists) validQuizId = session.quiz.id;
       }
 
       let validHostId: string | null = null;
       if (session.hostId) {
-        const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(session.hostId);
+        const userExists = await db.queryOne('SELECT id FROM users WHERE id = ?', [session.hostId]);
         if (userExists) validHostId = session.hostId;
       }
-      const existing = db.prepare('SELECT id FROM live_sessions WHERE code = ?').get(sessionCode) as any;
+      const existing = await db.queryOne('SELECT id FROM live_sessions WHERE code = ?', [sessionCode]);
 
       if (existing) {
-        db.prepare(`
+        await db.execute(`
           UPDATE live_sessions 
           SET status = ?, current_slide_index = ?, session_data = ?, quiz_id = ?, host_id = ?
           WHERE code = ?
-        `).run(
+        `, [
           session.status || 'lobby',
           session.currentSlideIndex || 0,
           JSON.stringify(session),
           validQuizId,
           validHostId,
           sessionCode
-        );
+        ]);
       } else {
-        db.prepare(`
+        await db.execute(`
           INSERT INTO live_sessions (id, code, quiz_id, host_id, status, current_slide_index, session_data, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
+        `, [
           session.id || 'session_' + Date.now(),
           sessionCode,
           validQuizId,
@@ -79,7 +77,7 @@ export async function POST(req: NextRequest) {
           session.currentSlideIndex || 0,
           JSON.stringify(session),
           session.createdAt || now
-        );
+        ]);
       }
 
       return apiSuccess({ success: true, session });
@@ -92,13 +90,13 @@ export async function POST(req: NextRequest) {
       }
 
       const cleanCode = code.trim();
-      const row = db.prepare('SELECT session_data FROM live_sessions WHERE code = ?').get(cleanCode) as any;
+      const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
 
       if (!row || !row.session_data) {
         return apiError('Invalid session code. Please verify the 6-digit PIN.', 404);
       }
 
-      const sess: LiveSession = JSON.parse(row.session_data);
+      const sess: LiveSession = typeof row.session_data === 'object' ? row.session_data : JSON.parse(row.session_data);
       if (sess.status === 'ended') {
         return apiError('This live session has already concluded.', 400);
       }
@@ -123,11 +121,11 @@ export async function POST(req: NextRequest) {
         sess.participants.push(savedParticipant);
       }
 
-      db.prepare(`
+      await db.execute(`
         UPDATE live_sessions 
         SET session_data = ? 
         WHERE code = ?
-      `).run(JSON.stringify(sess), cleanCode);
+      `, [JSON.stringify(sess), cleanCode]);
 
       return apiSuccess({ success: true, participant: savedParticipant, session: sess });
     }
@@ -139,10 +137,10 @@ export async function POST(req: NextRequest) {
       }
 
       const cleanCode = code.trim();
-      const row = db.prepare('SELECT session_data FROM live_sessions WHERE code = ?').get(cleanCode) as any;
+      const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
       if (!row || !row.session_data) return apiError('Session not found', 404);
 
-      const sess: LiveSession = JSON.parse(row.session_data);
+      const sess: LiveSession = typeof row.session_data === 'object' ? row.session_data : JSON.parse(row.session_data);
       const currentSlide = sess.quiz?.questions?.[sess.currentSlideIndex];
       if (!currentSlide) return apiError('Slide not found', 400);
 
@@ -182,11 +180,11 @@ export async function POST(req: NextRequest) {
 
       sess.responses.push(resp);
 
-      db.prepare(`
+      await db.execute(`
         UPDATE live_sessions 
         SET session_data = ? 
         WHERE code = ?
-      `).run(JSON.stringify(sess), cleanCode);
+      `, [JSON.stringify(sess), cleanCode]);
 
       return apiSuccess({ success: true, isCorrect, pointsEarned, session: sess });
     }
@@ -198,10 +196,10 @@ export async function POST(req: NextRequest) {
       }
 
       const cleanCode = code.trim();
-      const row = db.prepare('SELECT session_data FROM live_sessions WHERE code = ?').get(cleanCode) as any;
+      const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
       if (!row || !row.session_data) return apiError('Session not found', 404);
 
-      const sess: LiveSession = JSON.parse(row.session_data);
+      const sess: LiveSession = typeof row.session_data === 'object' ? row.session_data : JSON.parse(row.session_data);
       sess.status = status;
       if (nextSlideIndex !== undefined) {
         sess.currentSlideIndex = nextSlideIndex;
@@ -210,17 +208,17 @@ export async function POST(req: NextRequest) {
         sess.endedAt = now;
       }
 
-      db.prepare(`
+      await db.execute(`
         UPDATE live_sessions 
         SET status = ?, current_slide_index = ?, session_data = ?, ended_at = ?
         WHERE code = ?
-      `).run(
+      `, [
         status,
         sess.currentSlideIndex,
         JSON.stringify(sess),
         sess.endedAt || null,
         cleanCode
-      );
+      ]);
 
       return apiSuccess({ success: true, session: sess });
     }

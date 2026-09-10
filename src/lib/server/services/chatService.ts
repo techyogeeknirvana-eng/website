@@ -1,12 +1,11 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { CommunityChannel, CommunityMessage, User, UserRole } from '@/types';
 import { creditService } from './creditService';
 import crypto from 'crypto';
 
 export const chatService = {
-  getChannels(): CommunityChannel[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM community_channels ORDER BY category ASC, name ASC').all() as any[];
+  async getChannels(): Promise<CommunityChannel[]> {
+    const rows = await db.queryAll('SELECT * FROM community_channels ORDER BY category ASC, name ASC');
     return rows.map(r => ({
       id: r.id,
       slug: r.slug,
@@ -19,8 +18,7 @@ export const chatService = {
     }));
   },
 
-  getMessages(channelSlug: string, limit = 50, beforeTimestamp?: string): CommunityMessage[] {
-    const db = getDatabase();
+  async getMessages(channelSlug: string, limit = 50, beforeTimestamp?: string): Promise<CommunityMessage[]> {
     const conditions = ['m.channel_slug = ?', 'm.deleted_at IS NULL'];
     const params: any[] = [channelSlug];
 
@@ -29,14 +27,14 @@ export const chatService = {
       params.push(beforeTimestamp);
     }
 
-    const rows = db.prepare(`
+    const rows = await db.queryAll(`
       SELECT m.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role
       FROM community_messages m
       JOIN users u ON m.user_id = u.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY m.created_at DESC
       LIMIT ?
-    `).all(...params, limit) as any[];
+    `, [...params, limit]);
 
     // Fetch reactions for each message
     const messageIds = rows.map(r => r.id);
@@ -44,9 +42,9 @@ export const chatService = {
 
     if (messageIds.length > 0) {
       const placeholders = messageIds.map(() => '?').join(',');
-      const rxRows = db.prepare(`
+      const rxRows = await db.queryAll<{ message_id: string; emoji: string; user_id: string }>(`
         SELECT message_id, emoji, user_id FROM message_reactions WHERE message_id IN (${placeholders})
-      `).all(...messageIds) as { message_id: string; emoji: string; user_id: string }[];
+      `, messageIds);
 
       for (const rx of rxRows) {
         if (!reactionsMap[rx.message_id]) reactionsMap[rx.message_id] = {};
@@ -71,17 +69,15 @@ export const chatService = {
     }));
   },
 
-  postMessage(
+  async postMessage(
     channelSlug: string,
     content: string,
     user: User,
     codeSnippet?: { language: string; code: string },
     replyToId?: string
-  ): CommunityMessage {
-    const db = getDatabase();
-
+  ): Promise<CommunityMessage> {
     // Enforce 1 credit cost per message
-    const deductRes = creditService.deductCredits(user.id, 1, `Message in #${channelSlug}`, 'chat');
+    const deductRes = await creditService.deductCredits(user.id, 1, `Message in #${channelSlug}`, 'chat');
     if (!deductRes.success) {
       throw new Error('Insufficient credits. You need 1 credit to post a message in the community.');
     }
@@ -89,11 +85,11 @@ export const chatService = {
     const id = 'msg_' + crypto.randomUUID().slice(0, 10);
     const now = new Date().toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO community_messages (
         id, channel_slug, user_id, content, code_language, code_snippet, reply_to_id, is_pinned, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       id,
       channelSlug,
       user.id,
@@ -104,7 +100,7 @@ export const chatService = {
       0,
       now,
       now
-    );
+    ]);
 
     return {
       id,
@@ -122,33 +118,30 @@ export const chatService = {
     };
   },
 
-  toggleReaction(messageId: string, userId: string, emoji: string): boolean {
-    const db = getDatabase();
-    const existing = db.prepare('SELECT * FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?').get(messageId, userId, emoji);
+  async toggleReaction(messageId: string, userId: string, emoji: string): Promise<boolean> {
+    const existing = await db.queryOne('SELECT * FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [messageId, userId, emoji]);
 
     if (existing) {
-      db.prepare('DELETE FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?').run(messageId, userId, emoji);
+      await db.execute('DELETE FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [messageId, userId, emoji]);
       return false;
     } else {
-      db.prepare('INSERT INTO message_reactions (message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?)').run(messageId, userId, emoji, new Date().toISOString());
+      await db.execute('INSERT INTO message_reactions (message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?)', [messageId, userId, emoji, new Date().toISOString()]);
       return true;
     }
   },
 
-  pinMessage(messageId: string, isPinned: boolean, adminUser: User): void {
-    const db = getDatabase();
-    db.prepare('UPDATE community_messages SET is_pinned = ?, updated_at = ? WHERE id = ?').run(isPinned ? 1 : 0, new Date().toISOString(), messageId);
+  async pinMessage(messageId: string, isPinned: boolean, adminUser: User): Promise<void> {
+    await db.execute('UPDATE community_messages SET is_pinned = ?, updated_at = ? WHERE id = ?', [isPinned ? 1 : 0, new Date().toISOString(), messageId]);
   },
 
-  deleteMessage(messageId: string, adminUser: User): boolean {
-    const db = getDatabase();
+  async deleteMessage(messageId: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
-    const result = db.prepare('UPDATE community_messages SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, messageId);
-    if (result.changes > 0) {
-      db.prepare(`
+    const result = await db.execute('UPDATE community_messages SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, messageId]);
+    if (result.rowCount > 0) {
+      await db.execute(`
         INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `, [
         'log_' + crypto.randomUUID(),
         now,
         adminUser.id,
@@ -159,21 +152,20 @@ export const chatService = {
         messageId,
         `Deleted message ${messageId}`,
         'warning'
-      );
+      ]);
       return true;
     }
     return false;
   },
 
-  updateMessage(messageId: string, newContent: string, adminUser: User): boolean {
-    const db = getDatabase();
+  async updateMessage(messageId: string, newContent: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
-    const result = db.prepare('UPDATE community_messages SET content = ?, updated_at = ? WHERE id = ?').run(newContent.trim(), now, messageId);
-    if (result.changes > 0) {
-      db.prepare(`
+    const result = await db.execute('UPDATE community_messages SET content = ?, updated_at = ? WHERE id = ?', [newContent.trim(), now, messageId]);
+    if (result.rowCount > 0) {
+      await db.execute(`
         INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `, [
         'log_' + crypto.randomUUID(),
         now,
         adminUser.id,
@@ -184,7 +176,7 @@ export const chatService = {
         messageId,
         `Modified message ${messageId}`,
         'success'
-      );
+      ]);
       return true;
     }
     return false;

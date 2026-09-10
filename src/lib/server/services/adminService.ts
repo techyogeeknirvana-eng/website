@@ -1,11 +1,10 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { AuditLog, ContentReport, SystemAnnouncement, User, UserRole } from '@/types';
 import crypto from 'crypto';
 
 export const adminService = {
-  getAuditLogs(limit = 100, offset = 0): AuditLog[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?').all(limit, offset) as any[];
+  async getAuditLogs(limit = 100, offset = 0): Promise<AuditLog[]> {
+    const rows = await db.queryAll('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?', [limit, offset]);
     return rows.map(r => ({
       id: r.id,
       timestamp: r.timestamp,
@@ -21,7 +20,7 @@ export const adminService = {
     }));
   },
 
-  logAction(
+  async logAction(
     actorId: string,
     actorName: string,
     actorRole: UserRole,
@@ -31,12 +30,11 @@ export const adminService = {
     details: string,
     status: 'success' | 'warning' | 'error' = 'success',
     ipAddress?: string
-  ): void {
-    const db = getDatabase();
-    db.prepare(`
+  ): Promise<void> {
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status, ip_address)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       new Date().toISOString(),
       actorId,
@@ -48,11 +46,10 @@ export const adminService = {
       details,
       status,
       ipAddress || null
-    );
+    ]);
   },
 
-  getReports(status?: string): ContentReport[] {
-    const db = getDatabase();
+  async getReports(status?: string): Promise<ContentReport[]> {
     let query = `
       SELECT r.*, u.name as reporter_name
       FROM content_reports r
@@ -65,7 +62,7 @@ export const adminService = {
     }
     query += ' ORDER BY r.created_at DESC';
 
-    const rows = db.prepare(query).all(...params) as any[];
+    const rows = await db.queryAll(query, params);
     return rows.map(r => ({
       id: r.id,
       reportedBy: r.reported_by_user_id,
@@ -80,15 +77,14 @@ export const adminService = {
     }));
   },
 
-  resolveReport(reportId: string, status: 'resolved' | 'dismissed', note: string, adminUser: User): void {
-    const db = getDatabase();
+  async resolveReport(reportId: string, status: 'resolved' | 'dismissed', note: string, adminUser: User): Promise<void> {
     const now = new Date().toISOString();
-    db.prepare(`
+    await db.execute(`
       UPDATE content_reports SET status = ?, resolution_note = ?, resolved_by_user_id = ?, updated_at = ?
       WHERE id = ?
-    `).run(status, note, adminUser.id, now, reportId);
+    `, [status, note, adminUser.id, now, reportId]);
 
-    this.logAction(
+    await this.logAction(
       adminUser.id,
       adminUser.name,
       adminUser.role,
@@ -100,9 +96,8 @@ export const adminService = {
     );
   },
 
-  getAnnouncements(): SystemAnnouncement[] {
-    const db = getDatabase();
-    const rows = db.prepare('SELECT * FROM system_announcements ORDER BY created_at DESC').all() as any[];
+  async getAnnouncements(): Promise<SystemAnnouncement[]> {
+    const rows = await db.queryAll('SELECT * FROM system_announcements ORDER BY created_at DESC');
     return rows.map(r => ({
       id: r.id,
       title: r.title,
@@ -116,8 +111,7 @@ export const adminService = {
     }));
   },
 
-  getActiveAnnouncements(userRole: UserRole = 'USER', userId?: string): SystemAnnouncement[] {
-    const db = getDatabase();
+  async getActiveAnnouncements(userRole: UserRole = 'USER', userId?: string): Promise<SystemAnnouncement[]> {
     const now = new Date().toISOString();
     let query = `
       SELECT * FROM system_announcements
@@ -135,7 +129,7 @@ export const adminService = {
     }
 
     query += ' ORDER BY created_at DESC';
-    const rows = db.prepare(query).all(...params) as any[];
+    const rows = await db.queryAll(query, params);
 
     return rows.map(r => ({
       id: r.id,
@@ -150,23 +144,22 @@ export const adminService = {
     }));
   },
 
-  createAnnouncement(
+  async createAnnouncement(
     title: string,
     message: string,
     targetAudience: 'ALL' | 'USERS' | 'ADMINS',
     adminUser: User,
     badge = 'PLATFORM UPDATE',
     expiresAt?: string
-  ): SystemAnnouncement {
-    const db = getDatabase();
+  ): Promise<SystemAnnouncement> {
     const id = 'ann_' + crypto.randomUUID().slice(0, 10);
     const now = new Date().toISOString();
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO system_announcements (
         id, title, message, target_audience, badge, created_by_name, created_by_user_id, active, expires_at, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       id,
       title.trim(),
       message.trim(),
@@ -177,9 +170,9 @@ export const adminService = {
       1,
       expiresAt || null,
       now
-    );
+    ]);
 
-    this.logAction(
+    await this.logAction(
       adminUser.id,
       adminUser.name,
       adminUser.role,
@@ -203,11 +196,10 @@ export const adminService = {
     };
   },
 
-  deleteAnnouncement(id: string, adminUser: User): boolean {
-    const db = getDatabase();
-    db.prepare('DELETE FROM system_announcements WHERE id = ?').run(id);
+  async deleteAnnouncement(id: string, adminUser: User): Promise<boolean> {
+    await db.execute('DELETE FROM system_announcements WHERE id = ?', [id]);
 
-    this.logAction(
+    await this.logAction(
       adminUser.id,
       adminUser.name,
       adminUser.role,
@@ -221,11 +213,11 @@ export const adminService = {
     return true;
   },
 
-  dismissAnnouncement(userId: string, announcementId: string): void {
-    const db = getDatabase();
-    db.prepare(`
-      INSERT OR IGNORE INTO dismissed_announcements (user_id, announcement_id, created_at)
+  async dismissAnnouncement(userId: string, announcementId: string): Promise<void> {
+    await db.execute(`
+      INSERT INTO dismissed_announcements (user_id, announcement_id, created_at)
       VALUES (?, ?, ?)
-    `).run(userId, announcementId, new Date().toISOString());
+      ON CONFLICT DO NOTHING
+    `, [userId, announcementId, new Date().toISOString()]);
   },
 };

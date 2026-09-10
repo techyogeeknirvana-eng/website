@@ -1,6 +1,16 @@
-import { getDatabase } from '../db/client';
+import { db } from '../db/client';
 import { CommunityEvent, EventCategory, SubmissionStatus, User, UserRole } from '@/types';
 import crypto from 'crypto';
+
+function safeParseJson(val: any, fallback: any = []): any {
+  if (!val) return fallback;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch (_) {
+    return fallback;
+  }
+}
 
 export interface EventFilter {
   status?: SubmissionStatus;
@@ -11,9 +21,11 @@ export interface EventFilter {
 }
 
 export const eventService = {
-  mapRow(row: any): CommunityEvent {
-    const db = getDatabase();
-    const registrations = db.prepare('SELECT user_id FROM event_registrations WHERE event_id = ?').all(row.id) as { user_id: string }[];
+  async mapRow(row: any): Promise<CommunityEvent> {
+    const registrations = await db.queryAll<{ user_id: string }>(
+      'SELECT user_id FROM event_registrations WHERE event_id = ?',
+      [row.id]
+    );
 
     return {
       id: row.id,
@@ -28,7 +40,7 @@ export const eventService = {
       registrationDeadline: row.registration_deadline,
       description: row.description,
       eligibility: row.eligibility || 'Open to all students',
-      skills: JSON.parse(row.skills || '[]'),
+      skills: safeParseJson(row.skills, []),
       registrationUrl: row.registration_url,
       participantsCount: registrations.length + (row.max_participants ? Math.min(row.max_participants, 15) : 10),
       maxParticipants: row.max_participants || undefined,
@@ -46,8 +58,7 @@ export const eventService = {
     };
   },
 
-  listEvents(filter: EventFilter = {}): { items: CommunityEvent[]; total: number } {
-    const db = getDatabase();
+  async listEvents(filter: EventFilter = {}): Promise<{ items: CommunityEvent[]; total: number }> {
     const page = Math.max(1, filter.page || 1);
     const limit = Math.min(100, Math.max(1, filter.limit || 20));
     const offset = (page - 1) * limit;
@@ -75,39 +86,40 @@ export const eventService = {
 
     const whereClause = conditions.join(' AND ');
 
-    const countRow = db.prepare(`
+    const countRow = await db.queryOne<{ count: number }>(`
       SELECT COUNT(*) as count FROM community_events e WHERE ${whereClause}
-    `).get(...params) as { count: number };
+    `, params);
 
-    const rows = db.prepare(`
+    const rows = await db.queryAll(`
       SELECT e.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
       FROM community_events e
       JOIN users u ON e.posted_by_user_id = u.id
       WHERE ${whereClause}
       ORDER BY e.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(...params, limit, offset);
+    `, [...params, limit, offset]);
+
+    const items = await Promise.all(rows.map(r => this.mapRow(r)));
 
     return {
-      items: rows.map(r => this.mapRow(r)),
-      total: countRow.count,
+      items,
+      total: countRow ? Number(countRow.count) : 0,
     };
   },
 
-  createEvent(data: Partial<CommunityEvent>, user: User): CommunityEvent {
-    const db = getDatabase();
+  async createEvent(data: Partial<CommunityEvent>, user: User): Promise<CommunityEvent> {
     const id = data.id || ('event_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
     const status: SubmissionStatus = 'pending';
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO community_events (
         id, title, category, organizer, organizer_logo, date, time, location,
         is_online, registration_deadline, description, eligibility, skills,
         registration_url, max_participants, banner_image, posted_by_user_id,
         status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       id,
       data.title || 'Untitled Community Event',
       data.category || 'Workshops',
@@ -128,35 +140,34 @@ export const eventService = {
       status,
       now,
       now
-    );
+    ]);
 
-    return this.getEventById(id)!;
+    const evt = await this.getEventById(id);
+    return evt!;
   },
 
-  getEventById(id: string): CommunityEvent | null {
-    const db = getDatabase();
-    const row = db.prepare(`
+  async getEventById(id: string): Promise<CommunityEvent | null> {
+    const row = await db.queryOne(`
       SELECT e.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
       FROM community_events e
       JOIN users u ON e.posted_by_user_id = u.id
       WHERE e.id = ? AND e.deleted_at IS NULL
-    `).get(id);
+    `, [id]);
 
-    return row ? this.mapRow(row) : null;
+    return row ? await this.mapRow(row) : null;
   },
 
-  reviewEvent(id: string, newStatus: SubmissionStatus, adminUser: User, rejectionReason?: string): CommunityEvent {
-    const db = getDatabase();
+  async reviewEvent(id: string, newStatus: SubmissionStatus, adminUser: User, rejectionReason?: string): Promise<CommunityEvent> {
     const now = new Date().toISOString();
 
-    db.prepare(`
+    await db.execute(`
       UPDATE community_events SET status = ?, rejection_reason = ?, updated_at = ? WHERE id = ?
-    `).run(newStatus, rejectionReason || null, now, id);
+    `, [newStatus, rejectionReason || null, now, id]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -167,34 +178,33 @@ export const eventService = {
       id,
       `Reviewed community event. Set status to ${newStatus}`,
       'success'
-    );
+    ]);
 
-    return this.getEventById(id)!;
+    const evt = await this.getEventById(id);
+    return evt!;
   },
 
-  toggleRSVP(eventId: string, userId: string): boolean {
-    const db = getDatabase();
-    const existing = db.prepare('SELECT * FROM event_registrations WHERE user_id = ? AND event_id = ?').get(userId, eventId);
+  async toggleRSVP(eventId: string, userId: string): Promise<boolean> {
+    const existing = await db.queryOne('SELECT * FROM event_registrations WHERE user_id = ? AND event_id = ?', [userId, eventId]);
 
     if (existing) {
-      db.prepare('DELETE FROM event_registrations WHERE user_id = ? AND event_id = ?').run(userId, eventId);
+      await db.execute('DELETE FROM event_registrations WHERE user_id = ? AND event_id = ?', [userId, eventId]);
       return false;
     } else {
-      db.prepare('INSERT INTO event_registrations (user_id, event_id, created_at) VALUES (?, ?, ?)').run(userId, eventId, new Date().toISOString());
+      await db.execute('INSERT INTO event_registrations (user_id, event_id, created_at) VALUES (?, ?, ?)', [userId, eventId, new Date().toISOString()]);
       return true;
     }
   },
 
-  deleteEvent(id: string, adminUser: User): boolean {
-    const db = getDatabase();
+  async deleteEvent(id: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
-    const target = this.getEventById(id);
-    const result = db.prepare('UPDATE community_events SET deleted_at = ?, updated_at = ? WHERE id = ?').run(now, now, id);
-    if (result.changes > 0) {
-      db.prepare(`
+    const target = await this.getEventById(id);
+    const result = await db.execute('UPDATE community_events SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
+    if (result.rowCount > 0) {
+      await db.execute(`
         INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
+      `, [
         'log_' + crypto.randomUUID(),
         now,
         adminUser.id,
@@ -205,21 +215,20 @@ export const eventService = {
         id,
         `Deleted event "${target?.title || id}" by "${target?.organizer || 'N/A'}"`,
         'warning'
-      );
+      ]);
       return true;
     }
     return false;
   },
 
-  updateEvent(id: string, updates: Partial<CommunityEvent>, adminUser: User): CommunityEvent {
-    const db = getDatabase();
-    const current = this.getEventById(id);
+  async updateEvent(id: string, updates: Partial<CommunityEvent>, adminUser: User): Promise<CommunityEvent> {
+    const current = await this.getEventById(id);
     if (!current) throw new Error('Event not found.');
 
     const now = new Date().toISOString();
     const updated: CommunityEvent = { ...current, ...updates };
 
-    db.prepare(`
+    await db.execute(`
       UPDATE community_events SET
         title = ?,
         category = ?,
@@ -239,7 +248,7 @@ export const eventService = {
         status = ?,
         updated_at = ?
       WHERE id = ?
-    `).run(
+    `, [
       updated.title,
       updated.category,
       updated.organizer,
@@ -258,12 +267,12 @@ export const eventService = {
       updated.status,
       now,
       id
-    );
+    ]);
 
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `, [
       'log_' + crypto.randomUUID(),
       now,
       adminUser.id,
@@ -274,8 +283,9 @@ export const eventService = {
       id,
       `Modified event ${id}: "${updated.title}"`,
       'success'
-    );
+    ]);
 
-    return this.getEventById(id)!;
+    const evt = await this.getEventById(id);
+    return evt!;
   },
 };

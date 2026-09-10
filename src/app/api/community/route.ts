@@ -10,14 +10,14 @@ export async function GET(req: NextRequest) {
 
     if (!channelSlug) {
       // Return channels list
-      const channels = chatService.getChannels();
+      const channels = await chatService.getChannels();
       return apiSuccess({ channels });
     }
 
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const beforeTimestamp = searchParams.get('before') || undefined;
 
-    const messages = chatService.getMessages(channelSlug, limit, beforeTimestamp);
+    const messages = await chatService.getMessages(channelSlug, limit, beforeTimestamp);
     return apiSuccess({ channelSlug, messages });
   } catch (err: any) {
     return apiError(err.message || 'Failed to fetch community data', 500);
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized. Please log in.', 401);
     }
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       if (!messageId || !emoji) {
         return apiError('messageId and emoji are required.', 400);
       }
-      const isAdded = chatService.toggleReaction(messageId, authUser.id, emoji);
+      const isAdded = await chatService.toggleReaction(messageId, authUser.id, emoji);
       return apiSuccess({ isAdded });
     }
 
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       return apiError('channelSlug and content are required.', 400);
     }
 
-    const message = chatService.postMessage(channelSlug, content, authUser, codeSnippet, replyToId);
+    const message = await chatService.postMessage(channelSlug, content, authUser, codeSnippet, replyToId);
     return apiSuccess(message, 201);
   } catch (err: any) {
     return apiError(err.message || 'Failed to post message', 400);
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized. Please log in.', 401);
     }
@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest) {
       if (authUser.role !== 'ADMIN') {
         return apiError('Forbidden. Admin access required to pin messages.', 403);
       }
-      chatService.pinMessage(messageId, Boolean(isPinned), authUser);
+      await chatService.pinMessage(messageId, Boolean(isPinned), authUser);
       return apiSuccess({ success: true, isPinned: Boolean(isPinned) });
     }
 
@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Admins can edit any message; regular users could edit their own if needed
-    const updated = chatService.updateMessage(messageId, content, authUser);
+    const updated = await chatService.updateMessage(messageId, content, authUser);
     if (!updated) {
       return apiError('Message not found or update failed.', 404);
     }
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser) {
       return apiError('Unauthorized. Please log in.', 401);
     }
@@ -115,7 +115,7 @@ export async function DELETE(req: NextRequest) {
       return apiError('messageId is required.', 400);
     }
 
-    const deleted = chatService.deleteMessage(messageId, authUser);
+    const deleted = await chatService.deleteMessage(messageId, authUser);
     if (!deleted) {
       return apiError('Message not found or already deleted.', 404);
     }

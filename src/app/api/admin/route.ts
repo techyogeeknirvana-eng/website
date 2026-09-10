@@ -2,12 +2,12 @@ import { NextRequest } from 'next/server';
 import { extractAuthUser } from '@/lib/server/middleware/authGuard';
 import { adminService } from '@/lib/server/services/adminService';
 import { userService } from '@/lib/server/services/userService';
-import { getDatabase } from '@/lib/server/db/client';
+import { db } from '@/lib/server/db/client';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 
 export async function GET(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Administrator access required.', 403);
     }
@@ -18,24 +18,30 @@ export async function GET(req: NextRequest) {
     if (view === 'audit-logs') {
       const limit = parseInt(searchParams.get('limit') || '100', 10);
       const offset = parseInt(searchParams.get('offset') || '0', 10);
-      const logs = adminService.getAuditLogs(limit, offset);
+      const logs = await adminService.getAuditLogs(limit, offset);
       return apiSuccess(logs);
     }
 
     if (view === 'reports') {
       const status = searchParams.get('status') || undefined;
-      const reports = adminService.getReports(status);
+      const reports = await adminService.getReports(status);
       return apiSuccess(reports);
     }
 
     // Default: Platform Overview Metrics
-    const db = getDatabase();
-    const userCount = (db.prepare('SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL').get() as any).c;
-    const oppCount = (db.prepare('SELECT COUNT(*) as c FROM opportunities WHERE deleted_at IS NULL').get() as any).c;
-    const pendingOpps = (db.prepare("SELECT COUNT(*) as c FROM opportunities WHERE status = 'pending' AND deleted_at IS NULL").get() as any).c;
-    const eventCount = (db.prepare('SELECT COUNT(*) as c FROM community_events WHERE deleted_at IS NULL').get() as any).c;
-    const pendingEvents = (db.prepare("SELECT COUNT(*) as c FROM community_events WHERE status = 'pending' AND deleted_at IS NULL").get() as any).c;
-    const pendingReports = (db.prepare("SELECT COUNT(*) as c FROM content_reports WHERE status = 'pending'").get() as any).c;
+    const userCountRow = await db.queryOne<{ c: number }>('SELECT COUNT(*) as c FROM users WHERE deleted_at IS NULL');
+    const oppCountRow = await db.queryOne<{ c: number }>('SELECT COUNT(*) as c FROM opportunities WHERE deleted_at IS NULL');
+    const pendingOppsRow = await db.queryOne<{ c: number }>("SELECT COUNT(*) as c FROM opportunities WHERE status = 'pending' AND deleted_at IS NULL");
+    const eventCountRow = await db.queryOne<{ c: number }>('SELECT COUNT(*) as c FROM community_events WHERE deleted_at IS NULL');
+    const pendingEventsRow = await db.queryOne<{ c: number }>("SELECT COUNT(*) as c FROM community_events WHERE status = 'pending' AND deleted_at IS NULL");
+    const pendingReportsRow = await db.queryOne<{ c: number }>("SELECT COUNT(*) as c FROM content_reports WHERE status = 'pending'");
+
+    const userCount = Number(userCountRow?.c || 0);
+    const oppCount = Number(oppCountRow?.c || 0);
+    const pendingOpps = Number(pendingOppsRow?.c || 0);
+    const eventCount = Number(eventCountRow?.c || 0);
+    const pendingEvents = Number(pendingEventsRow?.c || 0);
+    const pendingReports = Number(pendingReportsRow?.c || 0);
 
     return apiSuccess({
       users: userCount,
@@ -53,7 +59,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authUser = extractAuthUser(req);
+    const authUser = await extractAuthUser(req);
     if (!authUser || authUser.role !== 'ADMIN') {
       return apiError('Forbidden. Administrator access required.', 403);
     }
@@ -63,14 +69,14 @@ export async function PATCH(req: NextRequest) {
 
     if (action === 'resolve_report') {
       if (!reportId || !status) return apiError('reportId and status required', 400);
-      adminService.resolveReport(reportId, status, note || 'Resolved by admin', authUser);
+      await adminService.resolveReport(reportId, status, note || 'Resolved by admin', authUser);
       return apiSuccess({ success: true });
     }
 
     if (action === 'toggle_suspend') {
       if (!targetUserId) return apiError('targetUserId required', 400);
       const explicitStatus = body.suspend !== undefined ? Boolean(body.suspend) : undefined;
-      const isSuspended = userService.toggleSuspend(targetUserId, authUser, explicitStatus);
+      const isSuspended = await userService.toggleSuspend(targetUserId, authUser, explicitStatus);
       return apiSuccess({ isSuspended });
     }
 
