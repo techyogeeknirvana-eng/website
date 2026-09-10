@@ -41,13 +41,13 @@ const getUserAvatar = (u?: { name?: string; avatar?: string } | null) => {
 export default function UserManagementPage() {
   const { currentUser, allUsers, refreshUserData, openGoogleModal, isAdmin } = useAuth();
   
+  const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
+
   // Helper to get merged user list with currentUser placed at the top and strict deduplication by email
-  const getMergedUsers = () => {
-    const rawUsers = dbStore.getUsers().filter(u => {
-      const email = (u.email || '').toLowerCase().trim();
+  const getMergedUsers = (sourceUsers?: User[]) => {
+    const rawUsers = (sourceUsers || dbStore.getUsers()).filter(u => {
       const id = u.id || '';
-      const name = (u.name || '').toLowerCase();
-      if (id === 'user_aarav' || email.includes('example.com') || name.includes('aarav') || u.username === 'aarav_codes') {
+      if (id === 'user_aarav' && u.username === 'aarav_codes') {
         return false;
       }
       return true;
@@ -72,7 +72,7 @@ export default function UserManagementPage() {
     return deduped;
   };
 
-  const [usersList, setUsersList] = useState<User[]>(getMergedUsers);
+  const [usersList, setUsersList] = useState<User[]>(() => getMergedUsers());
   const [searchQuery, setSearchQuery] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -184,17 +184,30 @@ export default function UserManagementPage() {
     setSelectedUserForCredits(null);
   };
 
-  // Keep usersList synchronized whenever currentUser or allUsers updates
-  useEffect(() => {
-    async function loadFresh() {
+  // Live fetch fresh users from backend API
+  const fetchLiveUsers = async (showLoading = false) => {
+    if (showLoading) setIsRefreshingUsers(true);
+    try {
       const res = await api.users.list();
-      if (res.data) {
+      if (res.data && Array.isArray(res.data)) {
         dbStore.setUsers(res.data);
+        setUsersList(getMergedUsers(res.data));
       }
-      setUsersList(getMergedUsers());
+    } catch (e) {
+      console.warn('Failed to live-sync users:', e);
+    } finally {
+      if (showLoading) setIsRefreshingUsers(false);
     }
-    loadFresh();
-  }, [currentUser, allUsers, refreshTick]);
+  };
+
+  // Keep usersList synchronized with backend via periodic polling
+  useEffect(() => {
+    fetchLiveUsers();
+    const interval = setInterval(() => {
+      fetchLiveUsers();
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [currentUser, refreshTick]);
 
   const handleToggleSuspend = async (userId: string) => {
     if (!currentUser) return;
@@ -423,6 +436,25 @@ export default function UserManagementPage() {
               <ExternalLink size={14} /> View My Profile
             </a>
           )}
+          <button
+            onClick={() => {
+              soundEffects.playClick();
+              fetchLiveUsers(true);
+            }}
+            disabled={isRefreshingUsers}
+            className="btn btn-primary"
+            style={{
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            title="Fetch real-time user logins across all devices"
+          >
+            <RefreshCw size={14} className={isRefreshingUsers ? 'animate-spin' : ''} />
+            {isRefreshingUsers ? 'Syncing...' : 'Sync Devices'}
+          </button>
           <button
             onClick={openGoogleModal}
             className="btn btn-ghost"

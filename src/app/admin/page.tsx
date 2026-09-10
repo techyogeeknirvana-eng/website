@@ -33,6 +33,12 @@ export default function AdminOverviewPage() {
     dbStore.syncWithBackend().then(() => {
       setRefreshTick(t => t + 1);
     });
+    const interval = setInterval(() => {
+      dbStore.syncWithBackend().then(() => {
+        setRefreshTick(t => t + 1);
+      });
+    }, 6000);
+    return () => clearInterval(interval);
   }, [currentUser]);
 
   const users = dbStore.getUsers();
