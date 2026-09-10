@@ -30,15 +30,31 @@ export default function AdminOverviewPage() {
   const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
-    dbStore.syncWithBackend().then(() => {
-      setRefreshTick(t => t + 1);
-    });
-    const interval = setInterval(() => {
+    const doSync = () => {
       dbStore.syncWithBackend().then(() => {
         setRefreshTick(t => t + 1);
       });
-    }, 6000);
-    return () => clearInterval(interval);
+    };
+
+    doSync();
+
+    const interval = setInterval(doSync, 2500);
+
+    const handleFocus = () => doSync();
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        doSync();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [currentUser]);
 
   const users = dbStore.getUsers();

@@ -200,13 +200,33 @@ export default function UserManagementPage() {
     }
   };
 
-  // Keep usersList synchronized with backend via periodic polling
+  // Keep usersList synchronized with backend via fast polling and instant focus triggers
   useEffect(() => {
     fetchLiveUsers();
+
+    // Fast 2.5s polling while viewing the dashboard
     const interval = setInterval(() => {
       fetchLiveUsers();
-    }, 6000);
-    return () => clearInterval(interval);
+    }, 2500);
+
+    // Instant sync when switching back to this window or tab
+    const handleFocus = () => {
+      fetchLiveUsers();
+    };
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchLiveUsers();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [currentUser, refreshTick]);
 
   const handleToggleSuspend = async (userId: string) => {

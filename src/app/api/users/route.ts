@@ -3,10 +3,18 @@ import { extractAuthUser } from '@/lib/server/middleware/authGuard';
 import { userService } from '@/lib/server/services/userService';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export async function GET(req: NextRequest) {
   try {
     const users = await userService.getAllUsers();
-    return apiSuccess(users);
+    const res = apiSuccess(users);
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0');
+    res.headers.set('Pragma', 'no-cache');
+    res.headers.set('Expires', '0');
+    return res;
   } catch (err: any) {
     return apiError(err.message || 'Failed to fetch users', 500);
   }

@@ -67,7 +67,7 @@ export const api = {
 
   // Users
   users: {
-    list: () => request<User[]>('/api/users'),
+    list: () => request<User[]>(`/api/users?_t=${Date.now()}`),
     updateProfile: (updates: Partial<User>) =>
       request<User>('/api/users', {
         method: 'PATCH',
