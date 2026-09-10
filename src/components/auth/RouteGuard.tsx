@@ -22,14 +22,23 @@ function RouteGuardContent({ children }: { children: React.ReactNode }) {
     }
   }, [searchParams]);
 
-  // Strict route gatekeeping
+  // Route gatekeeping: Only protect authenticated routes
   useEffect(() => {
     if (isLoading) return;
 
-    // Non-authenticated visitors can only access '/' or '/auth'
-    const isPublic = pathname === '/' || pathname === '/auth';
+    const privateRoutes = [
+      '/dashboard',
+      '/profile',
+      '/resume-lab',
+      '/opportunities/submit',
+      '/events/submit',
+      '/live/create',
+      '/admin',
+    ];
 
-    if (!isPublic && (!isAuthenticated || !currentUser)) {
+    const isPrivate = privateRoutes.some((route) => pathname === route || pathname.startsWith(route + '/'));
+
+    if (isPrivate && (!isAuthenticated || !currentUser)) {
       router.replace(`/?auth=required&redirect=${encodeURIComponent(pathname)}`);
       return;
     }

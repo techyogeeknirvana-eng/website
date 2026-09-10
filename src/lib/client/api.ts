@@ -46,7 +46,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<{ dat
 export const api = {
   // Authentication
   auth: {
-    getSession: () => request<{ user: User | null; wallet: CreditWallet | null; isAuthenticated: boolean; isAdmin: boolean; isSuspended?: boolean }>('/api/auth'),
+    getSession: () => request<{ user: User | null; wallet: CreditWallet | null; token?: string | null; isAuthenticated: boolean; isAdmin: boolean; isSuspended?: boolean }>('/api/auth'),
     login: (email: string, password: string) =>
       request<{ user: User; wallet: CreditWallet | null; token: string; isSuspended?: boolean }>('/api/auth', {
         method: 'POST',

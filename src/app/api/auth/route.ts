@@ -25,10 +25,16 @@ export async function GET(req: NextRequest) {
       return response;
     }
 
+    const cookieToken = req.cookies.get('tygn_session_token')?.value;
+    const authHeader = req.headers.get('authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const activeToken = cookieToken || bearerToken || null;
+
     const wallet = await creditService.getOrCreateWallet(user.id);
     return apiSuccess({
       user,
       wallet,
+      token: activeToken,
       isAuthenticated: true,
       isAdmin: user.role === 'ADMIN',
       isSuspended: false,

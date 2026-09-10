@@ -63,14 +63,40 @@ export const isGlobalAdminEmail = (email?: string | null): boolean => {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Hydrate initial state synchronously from localStorage so tab switches never flash as unauthenticated
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedProfile = localStorage.getItem('tygn_user_profile');
+        if (storedProfile) return JSON.parse(storedProfile);
+      } catch (_) {}
+    }
+    return null;
+  });
+
+  const [sessionToken, setSessionToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('tygn_session_token') || null;
+      } catch (_) {}
+    }
+    return null;
+  });
+
+  const [wallet, setWallet] = useState<CreditWallet | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedWallet = localStorage.getItem('tygn_user_wallet');
+        if (storedWallet) return JSON.parse(storedWallet);
+      } catch (_) {}
+    }
+    return null;
+  });
+
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [isGoogleLoggedIn, setIsGoogleLoggedIn] = useState(false);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [isGoogleChooserOpen, setIsGoogleChooserOpen] = useState(false);
-  const [wallet, setWallet] = useState<CreditWallet | null>(null);
   const [activeAnnouncements, setActiveAnnouncements] = useState<SystemAnnouncement[]>([]);
 
   // Initialize and validate session from real backend server on fresh browser load
@@ -78,27 +104,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function initSession() {
       try {
         const sessionRes = await api.auth.getSession();
+
         if (sessionRes.data?.isAuthenticated && sessionRes.data?.user && !sessionRes.data?.isSuspended && !sessionRes.data.user.isSuspended) {
           const u = sessionRes.data.user;
+          const w = sessionRes.data.wallet;
+          const activeTok = sessionRes.data.token || (typeof window !== 'undefined' ? localStorage.getItem('tygn_session_token') : null) || 'tygn_session_active';
+
           setCurrentUser(u);
-          setWallet(sessionRes.data.wallet);
-          setIsGoogleLoggedIn(true);
-          setSessionToken('tygn_server_session_active');
+          setWallet(w);
+          setSessionToken(activeTok);
+
           if (typeof window !== 'undefined') {
+            localStorage.setItem('tygn_user_profile', JSON.stringify(u));
+            localStorage.setItem('tygn_session_token', activeTok);
             localStorage.setItem('tygn_active_user_id', u.id);
             localStorage.setItem('tygn_active_user_email', u.email);
+            if (w) localStorage.setItem('tygn_user_wallet', JSON.stringify(w));
             localStorage.removeItem('tygn_is_suspended');
           }
-          // Sync into local dbStore mirror
           dbStore.addUser(u);
-        } else {
-          // Fresh session: STRICTLY unauthenticated
+        } else if (!sessionRes.error && sessionRes.data && sessionRes.data.isAuthenticated === false) {
+          // Only drop session if server cleanly responded with 200 OK and explicitly confirmed unauthenticated
+          // (Never drop on network error or server cold start)
           setCurrentUser(null);
-          setIsGoogleLoggedIn(false);
           setSessionToken(null);
           setWallet(null);
           if (typeof window !== 'undefined') {
+            localStorage.removeItem('tygn_user_profile');
+            localStorage.removeItem('tygn_user_wallet');
             localStorage.removeItem('tygn_active_user_id');
+            localStorage.removeItem('tygn_active_user_email');
             localStorage.removeItem('tygn_session_token');
             localStorage.removeItem('tygn_google_auth');
             if (sessionRes.data?.isSuspended) {
@@ -136,11 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setActiveAnnouncements(annRes.data);
         }
       } catch (err) {
-        console.error('Session initialization error:', err);
-        setCurrentUser(null);
-        setWallet(null);
-        setIsGoogleLoggedIn(false);
-        setSessionToken(null);
+        console.warn('Session initialization warning:', err);
+        // Do not wipe user on network failure; keep optimistic state
       } finally {
         setIsLoading(false);
       }
@@ -149,11 +181,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initSession();
   }, []);
 
-  // Periodic real-time sync: detects suspension, updates invites, and refreshes wallet
+  // Periodic real-time sync: NEVER logs out on network error or background tab throttle
   useEffect(() => {
     const interval = setInterval(async () => {
       const localToday = typeof window !== 'undefined' ? new Date().toLocaleDateString('en-CA') : undefined;
       dbStore.checkAndResetDailyCredits(false, localToday);
+
       if (currentUser) {
         try {
           // If local day rolled over, ensure server wallet resets daily credits to 10
@@ -162,22 +195,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           const sessionRes = await api.auth.getSession();
-          if (sessionRes.data?.isSuspended || !sessionRes.data?.isAuthenticated || !sessionRes.data?.user) {
-            // User was suspended or session revoked
+
+          // If network errored (e.g. background tab throttled or connection hiccup), DO NOT LOG OUT!
+          if (sessionRes.error) {
+            return;
+          }
+
+          if (sessionRes.data?.isSuspended) {
+            // Explicit ban by administrator
             setCurrentUser(null);
-            setIsGoogleLoggedIn(false);
             setSessionToken(null);
             setWallet(null);
             if (typeof window !== 'undefined') {
+              localStorage.removeItem('tygn_user_profile');
+              localStorage.removeItem('tygn_user_wallet');
               localStorage.removeItem('tygn_active_user_id');
               localStorage.removeItem('tygn_session_token');
               localStorage.removeItem('tygn_google_auth');
-              if (sessionRes.data?.isSuspended) {
-                localStorage.setItem('tygn_is_suspended', 'true');
-              }
+              localStorage.setItem('tygn_is_suspended', 'true');
             }
-            if (sessionRes.data?.isSuspended) {
-              alert('ACCESS REVOKED: This account has been banned by a platform administrator. You have been logged out.');
+            alert('ACCESS REVOKED: This account has been banned by a platform administrator. You have been logged out.');
+            return;
+          }
+
+          if (sessionRes.data && sessionRes.data.isAuthenticated === false) {
+            // Server explicitly rejected the session
+            setCurrentUser(null);
+            setSessionToken(null);
+            setWallet(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('tygn_user_profile');
+              localStorage.removeItem('tygn_user_wallet');
+              localStorage.removeItem('tygn_active_user_id');
+              localStorage.removeItem('tygn_session_token');
+              localStorage.removeItem('tygn_google_auth');
             }
             return;
           }
@@ -186,18 +237,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const fresh = sessionRes.data.user;
             if (fresh.referralCount !== currentUser.referralCount || fresh.avatar !== currentUser.avatar) {
               setCurrentUser((prev) => (prev ? { ...prev, referralCount: fresh.referralCount, avatar: fresh.avatar } : fresh));
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('tygn_user_profile', JSON.stringify(fresh));
+              }
             }
           }
 
           const wRes = await api.credits.getWallet(currentUser.id, localToday);
           if (wRes.data?.wallet) {
             setWallet({ ...wRes.data.wallet });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('tygn_user_wallet', JSON.stringify(wRes.data.wallet));
+            }
           }
         } catch (err) {
-          console.warn('Real-time sync error:', err);
+          // Background sync network error: ignore silently, do not disturb user
         }
       }
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [currentUser, wallet]);
 
@@ -225,6 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const refreshed = deduped.find((u) => u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase());
           if (refreshed) {
             setCurrentUser(refreshed);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('tygn_user_profile', JSON.stringify(refreshed));
+            }
           }
         }
       }
@@ -233,6 +293,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const wRes = await api.credits.getWallet(currentUser.id);
         if (wRes.data?.wallet) {
           setWallet(wRes.data.wallet);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('tygn_user_wallet', JSON.stringify(wRes.data.wallet));
+          }
         }
         const annRes = await api.announcements.getActive();
         if (annRes.data) {
@@ -249,6 +312,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const wRes = await api.credits.getWallet(currentUser.id);
       if (wRes.data?.wallet) {
         setWallet(wRes.data.wallet);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tygn_user_wallet', JSON.stringify(wRes.data.wallet));
+        }
       }
     }
   };
@@ -260,10 +326,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success: boolean; wallet?: CreditWallet; error?: string }> => {
     if (!currentUser) return { success: false, error: 'Authentication required' };
     
-    // Server-side deduction with atomic SQLite transaction
     const res = await api.credits.deduct(amount, description, feature || 'system');
     if (res.data?.wallet) {
       setWallet(res.data.wallet);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tygn_user_wallet', JSON.stringify(res.data.wallet));
+      }
       dbStore.deductCredits(currentUser.id, amount, description, feature);
       return { success: true, wallet: res.data.wallet };
     }
@@ -311,15 +379,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (res.data?.user && !res.data?.isSuspended && !res.data.user.isSuspended) {
       setCurrentUser(res.data.user);
       setWallet(res.data.wallet);
-      setIsGoogleLoggedIn(true);
       setSessionToken(res.data.token);
       dbStore.addUser(res.data.user);
 
       if (typeof window !== 'undefined') {
+        localStorage.setItem('tygn_user_profile', JSON.stringify(res.data.user));
         localStorage.setItem('tygn_google_auth', 'true');
         localStorage.setItem('tygn_session_token', res.data.token);
         localStorage.setItem('tygn_active_user_id', res.data.user.id);
         localStorage.setItem('tygn_active_user_email', res.data.user.email);
+        if (res.data.wallet) {
+          localStorage.setItem('tygn_user_wallet', JSON.stringify(res.data.wallet));
+        }
         localStorage.removeItem('tygn_is_suspended');
       }
 
@@ -360,15 +431,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (res.data?.user && !res.data?.isSuspended && !res.data.user.isSuspended) {
       setCurrentUser(res.data.user);
       setWallet(res.data.wallet);
-      setIsGoogleLoggedIn(true);
       setSessionToken(res.data.token);
       dbStore.addUser(res.data.user);
 
       if (typeof window !== 'undefined') {
+        localStorage.setItem('tygn_user_profile', JSON.stringify(res.data.user));
         localStorage.setItem('tygn_google_auth', 'true');
         localStorage.setItem('tygn_session_token', res.data.token);
         localStorage.setItem('tygn_active_user_id', res.data.user.id);
         localStorage.setItem('tygn_active_user_email', res.data.user.email);
+        if (res.data.wallet) {
+          localStorage.setItem('tygn_user_wallet', JSON.stringify(res.data.wallet));
+        }
         localStorage.removeItem('tygn_is_suspended');
         sessionStorage.removeItem('tygn_pending_referral');
         localStorage.removeItem('tygn_pending_referral');
@@ -387,7 +461,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     code: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // Verified on signup
     return { success: true };
   };
 
@@ -415,15 +488,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (res.data?.user && !res.data?.isSuspended && !res.data.user.isSuspended) {
       setCurrentUser(res.data.user);
       setWallet(res.data.wallet);
-      setIsGoogleLoggedIn(true);
       setSessionToken(res.data.token);
       dbStore.addUser(res.data.user);
 
       if (typeof window !== 'undefined') {
+        localStorage.setItem('tygn_user_profile', JSON.stringify(res.data.user));
         localStorage.setItem('tygn_google_auth', 'true');
         localStorage.setItem('tygn_session_token', res.data.token);
         localStorage.setItem('tygn_active_user_id', res.data.user.id);
         localStorage.setItem('tygn_active_user_email', res.data.user.email);
+        if (res.data.wallet) {
+          localStorage.setItem('tygn_user_wallet', JSON.stringify(res.data.wallet));
+        }
         localStorage.removeItem('tygn_is_suspended');
         sessionStorage.removeItem('tygn_pending_referral');
         localStorage.removeItem('tygn_pending_referral');
@@ -443,10 +519,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       alert(errorMsg);
 
       setCurrentUser(null);
-      setIsGoogleLoggedIn(false);
       setSessionToken(null);
       setWallet(null);
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('tygn_user_profile');
+        localStorage.removeItem('tygn_user_wallet');
         localStorage.removeItem('tygn_session_token');
         localStorage.removeItem('tygn_active_user_id');
         localStorage.removeItem('tygn_google_auth');
@@ -463,6 +540,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user && user.role !== 'ADMIN') {
       setCurrentUser(user);
       localStorage.setItem('tygn_active_user_id', user.id);
+      localStorage.setItem('tygn_user_profile', JSON.stringify(user));
       soundEffects.playClick();
     }
   };
@@ -480,6 +558,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await api.users.updateProfile(updates);
     if (res.data) {
       setCurrentUser(res.data);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tygn_user_profile', JSON.stringify(res.data));
+      }
       dbStore.updateUser(res.data);
       soundEffects.playSuccess();
     }
@@ -495,11 +576,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setCurrentUser(null);
     setWallet(null);
-    setIsGoogleLoggedIn(false);
     setSessionToken(null);
 
     // Completely wipe auth session keys from browser storage
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('tygn_user_profile');
+      localStorage.removeItem('tygn_user_wallet');
       localStorage.removeItem('tygn_is_suspended');
       localStorage.removeItem('tygn_google_auth');
       localStorage.removeItem('tygn_session_token');
@@ -515,9 +597,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout();
   };
 
-  // STRICT ADMIN CHECK: Only true if explicitly authenticated as admin
-  const isAuthenticated = !!(currentUser && isGoogleLoggedIn && sessionToken);
-  const isAdmin = !!(
+  // Resilient authentication check: True whenever valid user and session token exist
+  const isAuthenticated = Boolean(currentUser && sessionToken);
+  const isAdmin = Boolean(
     currentUser &&
     isAuthenticated &&
     (isGlobalAdminEmail(currentUser.email) || currentUser.role === 'ADMIN')
@@ -606,7 +688,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUser,
         isAuthenticated,
         isAdmin,
-        isGoogleLoggedIn,
+        isGoogleLoggedIn: isAuthenticated,
         sessionToken,
         isLoading,
         isGoogleModalOpen,

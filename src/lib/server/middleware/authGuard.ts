@@ -14,6 +14,16 @@ export interface TokenPayload {
   exp?: number;
 }
 
+function safeParseJson(val: any, fallback: any = []): any {
+  if (!val) return fallback;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch (_) {
+    return fallback;
+  }
+}
+
 export function signAuthToken(payload: Omit<TokenPayload, 'iat' | 'exp'>, expiresIn: SignOptions['expiresIn'] = '7d'): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn } as SignOptions);
 }
@@ -39,12 +49,6 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
   if (token && token !== 'tygn_server_session_active') {
     const payload = verifyAuthToken(token);
     if (payload && payload.userId) {
-      if (payload.sessionId) {
-        const sessionExists = await db.queryOne('SELECT id FROM user_sessions WHERE id = ?', [payload.sessionId]);
-        if (!sessionExists) {
-          return null; // Session revoked in DB (e.g. on user suspension or logout)
-        }
-      }
       targetRow = await db.queryOne(
         'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
         [payload.userId]
@@ -81,15 +85,15 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
     title: targetRow.title || '',
     collegeOrCompany: targetRow.college_or_company || '',
     education: targetRow.education || '',
-    skills: JSON.parse(targetRow.skills || '[]'),
-    interests: JSON.parse(targetRow.interests || '[]'),
+    skills: safeParseJson(targetRow.skills, []),
+    interests: safeParseJson(targetRow.interests, []),
     github: targetRow.github || '',
     linkedin: targetRow.linkedin || '',
     portfolio: targetRow.portfolio || '',
     experienceLevel: targetRow.experience_level || 'Beginner',
     xp: targetRow.xp || 0,
     level: targetRow.level || 'Novice',
-    badges: JSON.parse(targetRow.badges || '[]'),
+    badges: safeParseJson(targetRow.badges, []),
     bio: targetRow.bio || '',
     createdAt: targetRow.created_at,
     isSuspended: Boolean(targetRow.is_suspended),
