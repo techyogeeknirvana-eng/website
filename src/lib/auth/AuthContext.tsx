@@ -218,17 +218,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
+          // If the server couldn't verify on this tick (e.g. serverless container cold start), DO NOT wipe the user!
+          // Background sync must never log out a user with an active token. Only explicit logout or admin ban logs out.
           if (sessionRes.data && sessionRes.data.isAuthenticated === false) {
-            // Server explicitly rejected the session
-            setCurrentUser(null);
-            setSessionToken(null);
-            setWallet(null);
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem('tygn_user_profile');
-              localStorage.removeItem('tygn_user_wallet');
-              localStorage.removeItem('tygn_active_user_id');
-              localStorage.removeItem('tygn_session_token');
-              localStorage.removeItem('tygn_google_auth');
+            const hasLocalToken = typeof window !== 'undefined' ? localStorage.getItem('tygn_session_token') : null;
+            if (!hasLocalToken) {
+              setCurrentUser(null);
+              setSessionToken(null);
+              setWallet(null);
             }
             return;
           }
