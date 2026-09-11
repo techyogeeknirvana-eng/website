@@ -5,6 +5,12 @@ export async function runMigrations(): Promise<void> {
   // If Postgres is connected, schema is created via supabase_schema.sql.
   // This helper handles local/runtime schema safety.
   try {
+    // 1. Ensure all tables exist in SQLite before querying anything
+    if (!db.isPostgres()) {
+      const { SCHEMA_SQL } = await import('./schema');
+      await db.execRaw(SCHEMA_SQL);
+    }
+
     const channelCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM community_channels');
     if (!channelCount || Number(channelCount.count) === 0) {
       const defaultChannels = [

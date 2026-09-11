@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import jwt, { SignOptions } from 'jsonwebtoken';
-import { db } from '../db/client';
+import { db, ensureDbReady } from '../db/client';
 import { User } from '@/types';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'tygn_prod_secret_auth_token_key_2026_secure';
@@ -37,6 +37,10 @@ export function verifyAuthToken(token: string): TokenPayload | null {
 }
 
 export async function extractAuthUser(request: NextRequest, allowSuspended: boolean = false): Promise<User | null> {
+  try {
+    await ensureDbReady();
+  } catch (_) {}
+
   // 1. Try Cookie
   const cookieToken = request.cookies.get('tygn_session_token')?.value;
   // 2. Try Authorization Header
@@ -46,14 +50,18 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
   const token = cookieToken || bearerToken;
   let targetRow: any = null;
 
-  if (token && token !== 'tygn_server_session_active') {
-    const payload = verifyAuthToken(token);
-    if (payload && payload.userId) {
-      targetRow = await db.queryOne(
-        'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
-        [payload.userId]
-      );
+  try {
+    if (token && token !== 'tygn_server_session_active') {
+      const payload = verifyAuthToken(token);
+      if (payload && payload.userId) {
+        targetRow = await db.queryOne(
+          'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
+          [payload.userId]
+        );
+      }
     }
+  } catch (err) {
+    console.warn('extractAuthUser token query error:', err);
   }
 
   // 3. Fallback: Check active session headers

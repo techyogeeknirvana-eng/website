@@ -30,6 +30,7 @@ import { soundEffects } from '@/lib/audio/soundEffects';
 import { api } from '@/lib/client/api';
 import { AdminLiveStatusBar } from '@/components/admin/AdminLiveStatusBar';
 import { AdminEditModal } from '@/components/admin/AdminEditModal';
+import { SEED_USERS } from '@/lib/db/seedData';
 
 const getUserAvatar = (u?: { name?: string; avatar?: string } | null) => {
   if (u?.avatar && !u.avatar.includes('unsplash.com')) {
@@ -43,29 +44,40 @@ export default function UserManagementPage() {
   
   const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
 
-  // Helper to get merged user list with currentUser placed at the top and strict deduplication by email
+  // Helper to get merged user list with currentUser placed at the top and strict deduplication by email and ID
   const getMergedUsers = (sourceUsers?: User[]) => {
-    const rawUsers = (sourceUsers || dbStore.getUsers()).filter(u => {
-      const id = u.id || '';
-      if (id === 'user_aarav' && u.username === 'aarav_codes') {
-        return false;
+    const source = sourceUsers && sourceUsers.length > 0 ? sourceUsers : dbStore.getUsers();
+    
+    // Always preserve seed users as foundation
+    const combined = [...source];
+    for (const s of SEED_USERS) {
+      if (!combined.some(u => u.id === s.id || (u.email && s.email && u.email.toLowerCase().trim() === s.email.toLowerCase().trim()))) {
+        combined.push(s);
       }
-      return true;
-    });
+    }
+
     const seen = new Set<string>();
     const deduped: User[] = [];
 
     // If currentUser exists, place first
     if (currentUser) {
       const curEmail = (currentUser.email || '').toLowerCase().trim();
+      const curId = currentUser.id || '';
       if (curEmail) seen.add(curEmail);
+      if (curId) seen.add(curId);
       deduped.push(currentUser);
     }
 
-    for (const u of rawUsers) {
-      const cleanEmail = (u.email || u.id).toLowerCase().trim();
-      if (!cleanEmail || seen.has(cleanEmail)) continue;
-      seen.add(cleanEmail);
+    for (const u of combined) {
+      if (u.id === 'user_aarav' && u.username === 'aarav_codes') continue;
+      const emailKey = (u.email || '').toLowerCase().trim();
+      const idKey = (u.id || '').trim();
+      
+      if (emailKey && seen.has(emailKey)) continue;
+      if (idKey && seen.has(idKey)) continue;
+      
+      if (emailKey) seen.add(emailKey);
+      if (idKey) seen.add(idKey);
       deduped.push(u);
     }
 
@@ -189,9 +201,18 @@ export default function UserManagementPage() {
     if (showLoading) setIsRefreshingUsers(true);
     try {
       const res = await api.users.list();
-      if (res.data && Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         dbStore.setUsers(res.data);
-        setUsersList(getMergedUsers(res.data));
+        const merged = getMergedUsers(res.data);
+        setUsersList(prev => {
+          if (
+            prev.length === merged.length &&
+            prev.every((u, i) => u.id === merged[i].id && u.isSuspended === merged[i].isSuspended && u.role === merged[i].role)
+          ) {
+            return prev;
+          }
+          return merged;
+        });
       }
     } catch (e) {
       console.warn('Failed to live-sync users:', e);

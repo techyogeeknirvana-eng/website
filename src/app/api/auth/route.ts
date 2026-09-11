@@ -4,9 +4,14 @@ import { authService } from '@/lib/server/services/authService';
 import { creditService } from '@/lib/server/services/creditService';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 import { isValidEmail } from '@/lib/server/middleware/validator';
+import { ensureDbReady } from '@/lib/server/db/client';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDbReady();
     const user = await extractAuthUser(req, true);
     if (!user) {
       return apiSuccess({ user: null, wallet: null, isAuthenticated: false, isSuspended: false });
@@ -46,6 +51,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbReady();
     const body = await req.json();
     const { action, email, password, name, username, referralCode } = body;
     const ip = req.headers.get('x-forwarded-for') || req.ip;

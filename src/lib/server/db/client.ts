@@ -75,6 +75,14 @@ function getSqliteClient(): any {
       sqliteClient.pragma('foreign_keys = ON');
     } catch (_) {}
 
+    // Auto-create all 25 relational tables synchronously so 'no such table: users' is impossible
+    try {
+      const { SCHEMA_SQL } = require('./schema');
+      sqliteClient.exec(SCHEMA_SQL);
+    } catch (schemaErr) {
+      console.warn('Failed to auto-execute SQLite schema:', schemaErr);
+    }
+
     return sqliteClient;
   } catch (err) {
     console.warn('SQLite fallback unavailable in this environment:', err);

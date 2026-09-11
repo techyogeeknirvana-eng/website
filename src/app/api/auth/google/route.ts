@@ -3,9 +3,14 @@ import { authService } from '@/lib/server/services/authService';
 import { creditService } from '@/lib/server/services/creditService';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 import { isValidEmail } from '@/lib/server/middleware/validator';
+import { ensureDbReady } from '@/lib/server/db/client';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbReady();
     const body = await req.json();
     const { email, name, avatar, referralCode } = body;
     const ip = req.headers.get('x-forwarded-for') || req.ip;
