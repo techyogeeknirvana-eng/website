@@ -34,9 +34,18 @@ export default function CollabFinderPage() {
   const fetchCollabsFromServer = async () => {
     try {
       const res = await api.collab.list();
-      if (res.data && Array.isArray(res.data)) {
-        dbStore.setCollabRequests(res.data);
-        setRequests(res.data);
+      const items = res.data;
+      if (items && Array.isArray(items)) {
+        dbStore.setCollabRequests(items);
+        setRequests(prev => {
+          const map = new Map<string, CollabRequest>();
+          // Keep current state so newly posted requests never vanish
+          prev.forEach(r => map.set(r.id, r));
+          items.forEach((r: CollabRequest) => map.set(r.id, r));
+          return Array.from(map.values()).sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
       }
     } catch (_) {}
   };
@@ -77,14 +86,18 @@ export default function CollabFinderPage() {
     };
 
     const created = dbStore.addCollabRequest(payload, currentUser);
-    setRequests(prev => [created, ...prev]);
+    setRequests(prev => {
+      const map = new Map<string, CollabRequest>();
+      map.set(created.id, created);
+      prev.forEach(r => map.set(r.id, r));
+      return Array.from(map.values());
+    });
     setModalOpen(false);
     setTitle('');
     setDescription('');
 
     try {
       await api.collab.create({ ...payload, id: created.id });
-      fetchCollabsFromServer();
     } catch (_) {}
   };
 

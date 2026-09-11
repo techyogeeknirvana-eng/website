@@ -8,8 +8,19 @@ import { User, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Pro
 async function request<T>(url: string, options: RequestInit = {}): Promise<{ data: T | null; error: string | null; pagination?: any }> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem('tygn_session_token') : null;
-    const activeUserId = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_id') : null;
-    const activeUserEmail = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_email') : null;
+    let activeUserId = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_id') : null;
+    let activeUserEmail = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_email') : null;
+
+    if ((!activeUserId || !activeUserEmail) && typeof window !== 'undefined') {
+      try {
+        const prof = localStorage.getItem('tygn_user_profile');
+        if (prof) {
+          const parsed = JSON.parse(prof);
+          if (parsed.id && !activeUserId) activeUserId = parsed.id;
+          if (parsed.email && !activeUserEmail) activeUserEmail = parsed.email;
+        }
+      } catch (_) {}
+    }
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

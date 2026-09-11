@@ -36,15 +36,17 @@ export default function ProjectsPage() {
   const fetchProjectsFromServer = async () => {
     try {
       const res = await api.projects.list(selectedCategory, true);
-      if (res.data && Array.isArray(res.data)) {
-        const projMap = new Map<string, Project>();
-        dbStore.getProjects(true, currentUser?.id).forEach(p => projMap.set(p.id, p));
-        res.data.forEach((p: Project) => projMap.set(p.id, p));
-        const merged = Array.from(projMap.values()).sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        const visible = isAdmin ? merged : merged.filter(p => p.approvalStatus === 'approved' || p.authorId === currentUser?.id);
-        setProjects(visible);
+      const items = res.data;
+      if (items && Array.isArray(items)) {
+        dbStore.setProjects(items);
+        setProjects(prev => {
+          const projMap = new Map<string, Project>();
+          prev.forEach(p => projMap.set(p.id, p));
+          items.forEach((p: Project) => projMap.set(p.id, p));
+          return Array.from(projMap.values()).sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
       }
     } catch (_) {}
   };
@@ -133,7 +135,7 @@ export default function ProjectsPage() {
     if (!currentUser) return;
     soundEffects.playSuccess();
 
-    dbStore.addProject(
+    const created = dbStore.addProject(
       {
         title,
         description,
@@ -147,18 +149,18 @@ export default function ProjectsPage() {
       currentUser
     );
 
-    setProjects(dbStore.getProjects(isAdmin, currentUser.id));
+    setProjects(prev => {
+      const map = new Map<string, Project>();
+      map.set(created.id, created);
+      prev.forEach(p => map.set(p.id, p));
+      return Array.from(map.values());
+    });
     setModalOpen(false);
     setTitle('');
     setDescription('');
 
-    if (isAdmin) {
-      setSubmittedNotice('🚀 Project published directly to showcase!');
-    } else {
-      setSubmittedNotice('⏳ Project submitted for Admin Review! It will appear on the showcase once approved by an administrator.');
-    }
+    setSubmittedNotice('🚀 Project published directly to showcase!');
     setTimeout(() => setSubmittedNotice(''), 9000);
-    setTimeout(fetchProjectsFromServer, 500);
   };
 
   const filtered = projects.filter(p => {

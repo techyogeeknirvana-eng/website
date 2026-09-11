@@ -40,21 +40,23 @@ export default function NirvanaMomentsPage() {
   const fetchMomentsFromServer = async () => {
     try {
       const res = await api.moments.list(50, 0, true);
-      if (res.data && Array.isArray(res.data)) {
-        const momentMap = new Map<string, NirvanaMoment>();
-        dbStore.getMoments(true, currentUser?.id).forEach(m => momentMap.set(m.id, m));
-        res.data.forEach((m: NirvanaMoment) => momentMap.set(m.id, m));
-        const merged = Array.from(momentMap.values()).sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        const visible = isAdmin ? merged : merged.filter(m => m.status === 'approved' || m.userId === currentUser?.id);
-        setMoments(visible);
+      const items = res.data;
+      if (items && Array.isArray(items)) {
+        dbStore.setMoments(items);
+        setMoments(prev => {
+          const momentMap = new Map<string, NirvanaMoment>();
+          prev.forEach(m => momentMap.set(m.id, m));
+          items.forEach((m: NirvanaMoment) => momentMap.set(m.id, m));
+          return Array.from(momentMap.values()).sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
       }
     } catch (_) {}
   };
 
   useEffect(() => {
-    setMoments(dbStore.getMoments(isAdmin, currentUser?.id));
+    setMoments(dbStore.getMoments(true, currentUser?.id));
     fetchMomentsFromServer();
 
     // 4s polling loop for cross-account synchronization
@@ -88,7 +90,7 @@ export default function NirvanaMomentsPage() {
     soundEffects.playSuccess();
     const autoCat = inferCategory(postContent);
 
-    dbStore.addMoment(
+    const created = dbStore.addMoment(
       {
         content: postContent.trim(),
         category: autoCat,
@@ -97,16 +99,16 @@ export default function NirvanaMomentsPage() {
       currentUser
     );
 
-    setMoments(dbStore.getMoments(isAdmin, currentUser.id));
+    setMoments(prev => {
+      const map = new Map<string, NirvanaMoment>();
+      map.set(created.id, created);
+      prev.forEach(m => map.set(m.id, m));
+      return Array.from(map.values());
+    });
     setPostContent('');
 
-    if (isAdmin) {
-      setSubmittedNotice('🚀 Moment published directly to community feed!');
-    } else {
-      setSubmittedNotice('⏳ Moment submitted for Admin Review! It will appear on the public feed once approved by an administrator.');
-    }
+    setSubmittedNotice('🚀 Moment published directly to community feed!');
     setTimeout(() => setSubmittedNotice(''), 9000);
-    setTimeout(fetchMomentsFromServer, 500);
   };
 
   const handleApprove = async (id: string) => {

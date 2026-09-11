@@ -240,8 +240,19 @@ class DataStore {
   private syncApi(endpoint: string, method: string, body?: unknown) {
     if (typeof window === 'undefined') return;
     const token = localStorage.getItem('tygn_session_token');
-    const activeUserId = localStorage.getItem('tygn_active_user_id');
-    const activeUserEmail = localStorage.getItem('tygn_active_user_email');
+    let activeUserId = localStorage.getItem('tygn_active_user_id');
+    let activeUserEmail = localStorage.getItem('tygn_active_user_email');
+
+    if ((!activeUserId || !activeUserEmail) && typeof window !== 'undefined') {
+      try {
+        const prof = localStorage.getItem('tygn_user_profile');
+        if (prof) {
+          const parsed = JSON.parse(prof);
+          if (parsed.id && !activeUserId) activeUserId = parsed.id;
+          if (parsed.email && !activeUserEmail) activeUserEmail = parsed.email;
+        }
+      } catch (_) {}
+    }
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token && token !== 'tygn_server_session_active') headers['Authorization'] = `Bearer ${token}`;
@@ -992,7 +1003,7 @@ class DataStore {
     momentData: Omit<NirvanaMoment, 'id' | 'createdAt' | 'likesCount' | 'likedBy' | 'comments' | 'userId' | 'userName' | 'userAvatar' | 'userTitle' | 'status' | 'rejectionReason'>,
     author: User
   ): NirvanaMoment {
-    const status: SubmissionStatus = 'pending';
+    const status: SubmissionStatus = 'approved';
     const newMoment: NirvanaMoment = {
       ...momentData,
       id: 'moment_' + Date.now(),
@@ -1137,7 +1148,7 @@ class DataStore {
     projData: Omit<Project, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'authorId' | 'authorName' | 'authorAvatar' | 'approvalStatus' | 'rejectionReason'>,
     author: User
   ): Project {
-    const approvalStatus: SubmissionStatus = 'pending';
+    const approvalStatus: SubmissionStatus = 'approved';
     const newProj: Project = {
       ...projData,
       id: 'proj_' + Date.now(),

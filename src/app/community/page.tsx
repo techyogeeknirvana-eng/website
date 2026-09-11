@@ -55,7 +55,12 @@ export default function CommunityPage() {
           const serverMsgs: CommunityMessage[] = json.data.messages;
           dbStore.mergeMessages(serverMsgs);
           if (activeSlugRef.current === slug) {
-            setMessages(serverMsgs);
+            setMessages(prev => {
+              const map = new Map<string, CommunityMessage>();
+              prev.forEach(m => map.set(m.id, m));
+              serverMsgs.forEach(m => map.set(m.id, m));
+              return Array.from(map.values());
+            });
             if (autoScroll) {
               setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

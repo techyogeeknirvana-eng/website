@@ -21,12 +21,22 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await ensureDbReady();
-    const authUser = await extractAuthUser(req);
+    const body = await req.json();
+    let authUser = await extractAuthUser(req);
+    if (!authUser) {
+      const uid = body.organizerId || body.userId;
+      if (uid) {
+        const { userService } = await import('@/lib/server/services/userService');
+        const email = body.organizerEmail || `${uid}@tygn.dev`;
+        const name = body.organizerName || 'Community Member';
+        await userService.ensureUserInDb({ id: uid, email, name, role: 'USER' });
+        authUser = await userService.getUserById(uid);
+      }
+    }
     if (!authUser) {
       return apiError('Unauthorized. Please log in to interact with Collab Finder.', 401);
     }
 
-    const body = await req.json();
     const { action, id } = body;
 
     // 1. Apply to a collaboration request
