@@ -24,10 +24,11 @@ export default function NirvanaLiveLobby() {
   const [pinCode, setPinCode] = useState('');
   const [nickname, setNickname] = useState(currentUser?.name || '');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
 
   const quizzes = dbStore.getQuizzes();
 
-  const handleJoinByPin = (e: React.FormEvent) => {
+  const handleJoinByPin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     const cleanPin = pinCode.trim().replace(/\s+/g, '');
@@ -35,22 +36,76 @@ export default function NirvanaLiveLobby() {
       setErrorMessage('Please enter a valid 6-digit session PIN.');
       return;
     }
-    if (!nickname.trim()) {
-      setErrorMessage('Please enter a nickname to join.');
-      return;
-    }
+
+    const finalNickname = nickname.trim() || currentUser?.name || 'Player_' + Math.floor(100 + Math.random() * 900);
 
     soundEffects.playClick();
-    router.push(`/live/join?code=${cleanPin}&nickname=${encodeURIComponent(nickname.trim())}`);
+    setIsJoining(true);
+
+    try {
+      const result = await dbStore.joinLiveSessionAsync(cleanPin, finalNickname, currentUser?.avatar);
+      if (!result.success) {
+        setErrorMessage(result.message || 'Unable to join session. Please verify the 6-digit PIN.');
+        setIsJoining(false);
+        return;
+      }
+
+      soundEffects.playSuccess();
+      if (result.participant) {
+        sessionStorage.setItem(`tygn_part_${cleanPin}`, JSON.stringify(result.participant));
+      }
+      router.push(`/live/play/${cleanPin}`);
+    } catch {
+      setErrorMessage('Network error connecting to live session.');
+      setIsJoining(false);
+    }
   };
 
-  const handleLaunchSampleQuiz = (quizId: string) => {
-    if (!currentUser) return;
+  const handleLaunchSampleQuiz = async (quizId: string) => {
     soundEffects.playClick();
     const quiz = dbStore.getQuiz(quizId);
     if (quiz) {
-      const session = dbStore.createLiveSession(quiz, currentUser);
+      const session = await dbStore.createLiveSessionAsync(quiz, currentUser || undefined);
       router.push(`/live/host/${session.code}`);
+    }
+  };
+
+  const handlePlaySolo = async (quizId: string) => {
+    soundEffects.playClick();
+    const quiz = dbStore.getQuiz(quizId);
+    if (quiz) {
+      const hostUser = currentUser || {
+        id: 'u_solo_' + Date.now(),
+        name: 'Solo Player',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        username: 'soloplayer',
+        email: 'player@tygn.dev',
+        role: 'USER' as const,
+        title: 'Challenger',
+        collegeOrCompany: 'Community',
+        education: '',
+        skills: [],
+        interests: [],
+        xp: 100,
+        level: 'Novice',
+        badges: [],
+        isSuspended: false,
+        isEmailVerified: true,
+        createdAt: new Date().toISOString()
+      };
+
+      const session = await dbStore.createLiveSessionAsync(quiz, hostUser as any);
+      dbStore.updateSessionStatus(session.code, 'active_question', 0);
+      const participant = {
+        id: 'p_solo_' + Date.now(),
+        nickname: currentUser?.name || 'Solo Challenger',
+        avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        score: 0,
+        streak: 0,
+        joinedAt: new Date().toISOString()
+      };
+      sessionStorage.setItem(`tygn_part_${session.code}`, JSON.stringify(participant));
+      router.push(`/live/play/${session.code}?mode=solo`);
     }
   };
 
@@ -125,15 +180,25 @@ export default function NirvanaLiveLobby() {
 
           <form onSubmit={handleJoinByPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                Session 6-Digit PIN
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Session 6-Digit PIN
+                </label>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>Active Rooms Available</span>
+                </div>
+              </div>
+
               <input
                 type="text"
                 maxLength={6}
-                placeholder="e.g. 749201"
+                placeholder="e.g. 447161"
                 value={pinCode}
-                onChange={e => setPinCode(e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={e => {
+                  setPinCode(e.target.value.replace(/[^0-9]/g, ''));
+                  if (errorMessage) setErrorMessage('');
+                }}
                 className="input-custom"
                 style={{
                   fontSize: '1.4rem',
@@ -144,6 +209,33 @@ export default function NirvanaLiveLobby() {
                   color: 'var(--accent-cyan)',
                 }}
               />
+
+              {/* Quick Demo PIN Shortcuts */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Demo PINs:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinCode('447161');
+                    setErrorMessage('');
+                  }}
+                  className="badge badge-cyan"
+                  style={{ cursor: 'pointer', border: 'none', fontSize: '0.72rem' }}
+                >
+                  ⚡ 447161 (Tech)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPinCode('749201');
+                    setErrorMessage('');
+                  }}
+                  className="badge badge-indigo"
+                  style={{ cursor: 'pointer', border: 'none', fontSize: '0.72rem' }}
+                >
+                  ⚡ 749201 (DSA)
+                </button>
+              </div>
             </div>
 
             <div>
@@ -152,7 +244,7 @@ export default function NirvanaLiveLobby() {
               </label>
               <input
                 type="text"
-                placeholder="Enter your screen name"
+                placeholder="Enter screen name (or leave for auto)"
                 value={nickname}
                 onChange={e => setNickname(e.target.value)}
                 className="input-custom"
@@ -160,17 +252,18 @@ export default function NirvanaLiveLobby() {
             </div>
 
             {errorMessage && (
-              <div style={{ fontSize: '0.8rem', color: 'var(--accent-rose)', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.82rem', color: 'var(--accent-rose)', fontWeight: 600, background: 'rgba(244, 63, 94, 0.1)', padding: '8px 12px', borderRadius: 'var(--radius-sm)' }}>
                 {errorMessage}
               </div>
             )}
 
             <button
               type="submit"
+              disabled={isJoining}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '0.95rem', marginTop: '6px' }}
+              style={{ width: '100%', padding: '12px', fontSize: '0.95rem', marginTop: '4px' }}
             >
-              Enter Room &amp; Join <ArrowRight size={16} />
+              {isJoining ? 'Joining Room...' : 'Enter Room & Join'} <ArrowRight size={16} />
             </button>
           </form>
         </div>
@@ -182,7 +275,7 @@ export default function NirvanaLiveLobby() {
           <div>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Ready-to-Host Interactive Decks</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-              Launch in one click to generate a live 6-digit code and QR code for your audience.
+              Play solo for practice or host live to generate a 6-digit multiplayer room code.
             </p>
           </div>
           <a
@@ -233,18 +326,31 @@ export default function NirvanaLiveLobby() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
                 }}
               >
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                   By {quiz.creatorName}
                 </div>
-                <button
-                  onClick={() => handleLaunchSampleQuiz(quiz.id)}
-                  className="btn btn-primary"
-                  style={{ padding: '8px 18px', fontSize: '0.84rem' }}
-                >
-                  <Play size={14} /> Start Live Session
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handlePlaySolo(quiz.id)}
+                    className="btn btn-secondary"
+                    style={{ padding: '8px 14px', fontSize: '0.84rem' }}
+                    title="Play this quiz solo in practice mode"
+                  >
+                    <Sparkles size={14} /> Solo Play
+                  </button>
+                  <button
+                    onClick={() => handleLaunchSampleQuiz(quiz.id)}
+                    className="btn btn-primary"
+                    style={{ padding: '8px 14px', fontSize: '0.84rem' }}
+                    title="Host a multiplayer room with 6-digit PIN and QR code"
+                  >
+                    <Radio size={14} /> Host Live
+                  </button>
+                </div>
               </div>
             </div>
           ))}

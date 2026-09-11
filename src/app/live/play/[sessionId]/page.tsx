@@ -12,7 +12,8 @@ import {
   Trophy, 
   Sparkles, 
   Send,
-  HelpCircle
+  HelpCircle,
+  Play
 } from 'lucide-react';
 import { dbStore } from '@/lib/db/store';
 import { LiveSession, LiveParticipant } from '@/types';
@@ -30,6 +31,14 @@ export default function ParticipantPlayPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<{ isCorrect?: boolean; pointsEarned: number } | null>(null);
   const [lastSlideIndex, setLastSlideIndex] = useState<number>(-1);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!session) setLoadFailed(true);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [session]);
 
   useEffect(() => {
     // Retrieve participant profile from sessionStorage or create guest
@@ -55,6 +64,7 @@ export default function ParticipantPlayPage() {
       const sess = await dbStore.getLiveSessionByCodeAsync(sessionId);
       if (sess) {
         setSession({ ...sess });
+        setLoadFailed(false);
 
         // Reset state on slide transition
         if (sess.currentSlideIndex !== lastSlideIndex) {
@@ -105,9 +115,39 @@ export default function ParticipantPlayPage() {
 
   if (!session) {
     return (
-      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="glass-card" style={{ padding: '30px', textAlign: 'center' }}>
-          <h3>Connecting to Live Session {sessionId}...</h3>
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div className="glass-card glow-border" style={{ padding: '36px', maxWidth: '420px', textAlign: 'center', borderRadius: 'var(--radius-xl)' }}>
+          <Radio size={40} className="animate-pulse" color="var(--accent-cyan)" style={{ margin: '0 auto 16px' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px' }}>
+            {loadFailed ? 'Session Connecting...' : `Connecting to PIN ${sessionId}...`}
+          </h3>
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.5 }}>
+            {loadFailed
+              ? 'Could not connect to this room yet. You can launch it now or return to the Live Lobby.'
+              : 'Connecting with live room cluster...'}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              onClick={async () => {
+                const quizzes = dbStore.getQuizzes();
+                const auto = await dbStore.createLiveSessionAsync(quizzes[0], undefined, sessionId);
+                dbStore.updateSessionStatus(auto.code, 'active_question', 0);
+                setSession({ ...auto, status: 'active_question' });
+                setLoadFailed(false);
+              }}
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '12px', fontSize: '0.9rem' }}
+            >
+              <Play size={15} /> Start Interactive Deck
+            </button>
+            <button
+              onClick={() => router.push('/live')}
+              className="btn btn-ghost"
+              style={{ width: '100%', padding: '10px', fontSize: '0.85rem' }}
+            >
+              Return to Live Lobby
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -192,8 +232,22 @@ export default function ParticipantPlayPage() {
               See your name on the presenter&apos;s screen? The host will start shortly.
             </p>
 
-            <div className="badge badge-cyan" style={{ fontSize: '0.85rem', padding: '6px 16px' }}>
+            <div className="badge badge-cyan" style={{ fontSize: '0.85rem', padding: '6px 16px', marginBottom: '16px' }}>
               SESSION PIN: {session.code}
+            </div>
+
+            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  soundEffects.playClick();
+                  dbStore.updateSessionStatus(session.code, 'active_question', 0);
+                  setSession({ ...session, status: 'active_question', currentSlideIndex: 0 });
+                }}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '12px', fontSize: '0.95rem' }}
+              >
+                <Play size={16} /> Start Quiz Now
+              </button>
             </div>
           </div>
         ) : session.status === 'active_question' ? (
@@ -209,7 +263,7 @@ export default function ParticipantPlayPage() {
               }}
             >
               <span className="badge badge-indigo" style={{ marginBottom: '8px', fontSize: '0.72rem' }}>
-                QUESTION {session.currentSlideIndex + 1}
+                QUESTION {session.currentSlideIndex + 1} OF {session.quiz.questions.length}
               </span>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700, lineHeight: 1.35 }}>
                 {currentSlide.question}
@@ -242,9 +296,31 @@ export default function ParticipantPlayPage() {
                 <h4 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '6px' }}>
                   Response Locked In!
                 </h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                  Waiting for host to reveal results &amp; leaderboard...
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: '20px' }}>
+                  Your answer has been registered in the live room.
                 </p>
+                <button
+                  onClick={() => {
+                    soundEffects.playClick();
+                    const nextIdx = session.currentSlideIndex + 1;
+                    if (nextIdx < session.quiz.questions.length) {
+                      dbStore.updateSessionStatus(session.code, 'active_question', nextIdx);
+                      setLastSlideIndex(nextIdx);
+                      setSelectedOption(null);
+                      setHasSubmitted(false);
+                      setSubmissionResult(null);
+                      setWordInput('');
+                      setSession({ ...session, currentSlideIndex: nextIdx, status: 'active_question' });
+                    } else {
+                      dbStore.updateSessionStatus(session.code, 'leaderboard');
+                      setSession({ ...session, status: 'leaderboard' });
+                    }
+                  }}
+                  className="btn btn-primary"
+                  style={{ width: '100%', padding: '12px', fontSize: '0.92rem' }}
+                >
+                  {session.currentSlideIndex + 1 < session.quiz.questions.length ? 'Next Question ➔' : 'View Final Leaderboard 🏆'}
+                </button>
               </div>
             ) : currentSlide.type === 'word_cloud' ? (
               /* Word Cloud Input */

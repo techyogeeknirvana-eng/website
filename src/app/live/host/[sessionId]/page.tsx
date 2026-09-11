@@ -32,6 +32,8 @@ export default function HostLiveSessionPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
 
   useEffect(() => {
+    let activeCode = sessionId;
+
     // Load or create session
     async function init() {
       let sess = await dbStore.getLiveSessionByCodeAsync(sessionId);
@@ -39,15 +41,16 @@ export default function HostLiveSessionPage() {
         // Create on the fly from default quiz if not found, preserving sessionId as PIN code
         const quizzes = dbStore.getQuizzes();
         const defaultUser = dbStore.getUsers()[0] || { id: 'u_host', name: 'Nirvana Host', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' };
-        sess = dbStore.createLiveSession(quizzes[0], defaultUser as any, sessionId);
+        sess = await dbStore.createLiveSessionAsync(quizzes[0], defaultUser as any, sessionId);
       }
+      activeCode = sess.code;
       setSession({ ...sess });
     }
     init();
 
     // Poll for updates every 1.5s (simulating cross-device/cross-browser real-time sync!)
     const interval = setInterval(async () => {
-      const updated = await dbStore.getLiveSessionByCodeAsync(sessionId);
+      const updated = await dbStore.getLiveSessionByCodeAsync(activeCode);
       if (updated) {
         setSession({ ...updated });
       }

@@ -97,6 +97,99 @@ export async function runMigrations(): Promise<void> {
         `, [seed.id, 10, 0, 0, 10, today, now, now]);
       }
     }
+
+    // Seed Quizzes and Questions
+    const { SEED_QUIZZES } = await import('@/lib/db/seedData');
+    for (const q of SEED_QUIZZES) {
+      const existingQuiz = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [q.id]);
+      if (!existingQuiz) {
+        await db.execute(`
+          INSERT INTO quizzes (id, title, topic, difficulty, description, creator_id, creator_name, plays_count, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [q.id, q.title, q.topic, q.difficulty, q.description, q.creatorId, q.creatorName, q.playsCount || 0, q.createdAt || now]);
+
+        for (let i = 0; i < q.questions.length; i++) {
+          const quest = q.questions[i];
+          await db.execute(`
+            INSERT INTO quiz_questions (id, quiz_id, question_index, question_type, question_text, options, correct_answer, explanation, time_limit_seconds, points)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            quest.id,
+            q.id,
+            i,
+            quest.type,
+            quest.question,
+            JSON.stringify(quest.options || []),
+            quest.correctAnswer !== undefined ? quest.correctAnswer : null,
+            quest.explanation || null,
+            quest.timeLimitSeconds || 20,
+            quest.points || 1000
+          ]);
+        }
+      }
+    }
+
+    // Ensure Public Live Demo Sessions exist and are active in lobby state
+    const demoSessions = [
+      {
+        code: '447161',
+        quiz: SEED_QUIZZES[0],
+        title: 'Tech & Architecture Live Arena'
+      },
+      {
+        code: '749201',
+        quiz: SEED_QUIZZES[1] || SEED_QUIZZES[0],
+        title: 'DSA Sprint Live Challenge'
+      }
+    ];
+
+    for (const demo of demoSessions) {
+      const existingSession = await db.queryOne('SELECT id, status FROM live_sessions WHERE code = ?', [demo.code]);
+      const sessionObj = {
+        id: 'sess_' + demo.code,
+        code: demo.code,
+        quiz: demo.quiz,
+        hostId: 'user_lead_admin',
+        hostName: 'TechYOGeek Nirvana (Host)',
+        status: 'lobby',
+        currentSlideIndex: 0,
+        participants: [
+          {
+            id: 'p_host',
+            nickname: 'TechYOGeek Nirvana (Host)',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+            score: 0,
+            streak: 0,
+            joinedAt: now
+          }
+        ],
+        responses: [],
+        createdAt: now
+      };
+
+      if (!existingSession) {
+        await db.execute(`
+          INSERT INTO live_sessions (id, code, quiz_id, host_id, status, current_slide_index, session_data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          sessionObj.id,
+          demo.code,
+          demo.quiz.id,
+          'user_lead_admin',
+          'lobby',
+          0,
+          JSON.stringify(sessionObj),
+          now
+        ]);
+      } else if (existingSession.status === 'ended') {
+        // Revive ended demo session back into lobby so visitors can always join
+        await db.execute(`
+          UPDATE live_sessions
+          SET status = 'lobby', current_slide_index = 0, session_data = ?, ended_at = NULL
+          WHERE code = ?
+        `, [JSON.stringify(sessionObj), demo.code]);
+      }
+    }
   } catch (err) {
     console.warn('Migration hook skipped/deferred:', err);
   }

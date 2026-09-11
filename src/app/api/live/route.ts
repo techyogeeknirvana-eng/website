@@ -1,18 +1,95 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/server/db/client';
+import { db, ensureDbReady } from '@/lib/server/db/client';
 import { apiSuccess, apiError } from '@/lib/server/utils/response';
 import { LiveSession, LiveParticipant, LiveResponse } from '@/types';
 
 export async function GET(req: NextRequest) {
   try {
+    await ensureDbReady();
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code')?.trim();
 
-    if (!code) {
-      return apiError('Session PIN code is required', 400);
+    // If no code provided or list requested, return active sessions
+    if (!code || searchParams.get('list') === 'active') {
+      try {
+        const rows = await db.queryAll(
+          "SELECT session_data FROM live_sessions WHERE status != 'ended' ORDER BY created_at DESC LIMIT 10"
+        );
+        const sessions: LiveSession[] = rows.map(r =>
+          typeof r.session_data === 'object' ? r.session_data : JSON.parse(r.session_data)
+        );
+        return apiSuccess(sessions);
+      } catch {
+        return apiSuccess([]);
+      }
     }
 
-    const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [code]);
+    const cleanCode = code.replace(/\s+/g, '');
+    let row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
+
+    // Auto-provision standard/demo session if requested PIN is a valid 6-digit PIN
+    if ((!row || !row.session_data) && /^\d{6}$/.test(cleanCode)) {
+      try {
+        const { SEED_QUIZZES } = await import('@/lib/db/seedData');
+        const fallbackQuiz = cleanCode === '749201' ? (SEED_QUIZZES[1] || SEED_QUIZZES[0]) : SEED_QUIZZES[0];
+        const now = new Date().toISOString();
+        let validQuizId: string | null = null;
+        try {
+          const quizRow = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [fallbackQuiz.id]);
+          if (quizRow) {
+            validQuizId = fallbackQuiz.id;
+          } else {
+            await db.execute(`
+              INSERT INTO quizzes (id, title, topic, difficulty, description, creator_id, creator_name, plays_count, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [fallbackQuiz.id, fallbackQuiz.title, fallbackQuiz.topic, fallbackQuiz.difficulty, fallbackQuiz.description, 'user_lead_admin', 'TechYOGeek Nirvana (Host)', 100, now]);
+            validQuizId = fallbackQuiz.id;
+          }
+        } catch {
+          validQuizId = null;
+        }
+
+        const autoSession: LiveSession = {
+          id: 'sess_' + cleanCode,
+          code: cleanCode,
+          quiz: fallbackQuiz,
+          hostId: 'user_lead_admin',
+          hostName: 'TechYOGeek Nirvana (Host)',
+          status: 'lobby',
+          currentSlideIndex: 0,
+          participants: [
+            {
+              id: 'p_host',
+              nickname: 'TechYOGeek Nirvana (Host)',
+              avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+              score: 0,
+              streak: 0,
+              joinedAt: now
+            }
+          ],
+          responses: [],
+          createdAt: now
+        };
+
+        await db.execute(`
+          INSERT INTO live_sessions (id, code, quiz_id, host_id, status, current_slide_index, session_data, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          autoSession.id,
+          cleanCode,
+          validQuizId,
+          null,
+          'lobby',
+          0,
+          JSON.stringify(autoSession),
+          now
+        ]);
+
+        row = { session_data: JSON.stringify(autoSession) };
+      } catch (autoErr) {
+        console.warn('Auto-provisioning in GET live session deferred:', autoErr);
+      }
+    }
 
     if (!row || !row.session_data) {
       return apiError('Session not found. Please verify the 6-digit PIN.', 404);
@@ -27,6 +104,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureDbReady();
     const body = await req.json();
     const { action, session, code, participant, selectedOption, textResponse, timeTaken = 5, status, nextSlideIndex } = body;
     const now = new Date().toISOString();
@@ -37,17 +115,21 @@ export async function POST(req: NextRequest) {
         return apiError('Valid session object with code is required', 400);
       }
 
-      const sessionCode = session.code.trim();
+      const sessionCode = session.code.trim().replace(/\s+/g, '');
       let validQuizId: string | null = null;
       if (session.quiz?.id) {
-        const quizExists = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [session.quiz.id]);
-        if (quizExists) validQuizId = session.quiz.id;
+        try {
+          const quizExists = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [session.quiz.id]);
+          if (quizExists) validQuizId = session.quiz.id;
+        } catch (_) {}
       }
 
       let validHostId: string | null = null;
       if (session.hostId) {
-        const userExists = await db.queryOne('SELECT id FROM users WHERE id = ?', [session.hostId]);
-        if (userExists) validHostId = session.hostId;
+        try {
+          const userExists = await db.queryOne('SELECT id FROM users WHERE id = ?', [session.hostId]);
+          if (userExists) validHostId = session.hostId;
+        } catch (_) {}
       }
       const existing = await db.queryOne('SELECT id FROM live_sessions WHERE code = ?', [sessionCode]);
 
@@ -89,15 +171,84 @@ export async function POST(req: NextRequest) {
         return apiError('Code and participant nickname are required', 400);
       }
 
-      const cleanCode = code.trim();
-      const row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
+      const cleanCode = code.trim().replace(/\s+/g, '');
+      let row = await db.queryOne('SELECT session_data FROM live_sessions WHERE code = ?', [cleanCode]);
+
+      // Auto-provision if session row is missing but PIN is 6 digits
+      if ((!row || !row.session_data) && /^\d{6}$/.test(cleanCode)) {
+        try {
+          const { SEED_QUIZZES } = await import('@/lib/db/seedData');
+          const fallbackQuiz = cleanCode === '749201' ? (SEED_QUIZZES[1] || SEED_QUIZZES[0]) : SEED_QUIZZES[0];
+          const autoSess: LiveSession = {
+            id: 'sess_' + cleanCode,
+            code: cleanCode,
+            quiz: fallbackQuiz,
+            hostId: 'user_lead_admin',
+            hostName: 'TechYOGeek Nirvana (Host)',
+            status: 'lobby',
+            currentSlideIndex: 0,
+            participants: [
+              {
+                id: 'p_host',
+                nickname: 'TechYOGeek Nirvana (Host)',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                score: 0,
+                streak: 0,
+                joinedAt: now
+              }
+            ],
+            responses: [],
+            createdAt: now
+          };
+
+          let validQuizId: string | null = null;
+          try {
+            const quizRow = await db.queryOne('SELECT id FROM quizzes WHERE id = ?', [fallbackQuiz.id]);
+            if (quizRow) {
+              validQuizId = fallbackQuiz.id;
+            } else {
+              await db.execute(`
+                INSERT INTO quizzes (id, title, topic, difficulty, description, creator_id, creator_name, plays_count, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `, [fallbackQuiz.id, fallbackQuiz.title, fallbackQuiz.topic, fallbackQuiz.difficulty, fallbackQuiz.description, 'user_lead_admin', 'TechYOGeek Nirvana (Host)', 100, now]);
+              validQuizId = fallbackQuiz.id;
+            }
+          } catch {
+            validQuizId = null;
+          }
+
+          await db.execute(`
+            INSERT INTO live_sessions (id, code, quiz_id, host_id, status, current_slide_index, session_data, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            autoSess.id,
+            cleanCode,
+            validQuizId,
+            null,
+            'lobby',
+            0,
+            JSON.stringify(autoSess),
+            now
+          ]);
+
+          row = { session_data: JSON.stringify(autoSess) };
+        } catch (provErr) {
+          console.warn('Auto-provisioning in join failed:', provErr);
+        }
+      }
 
       if (!row || !row.session_data) {
         return apiError('Invalid session code. Please verify the 6-digit PIN.', 404);
       }
 
       const sess: LiveSession = typeof row.session_data === 'object' ? row.session_data : JSON.parse(row.session_data);
-      if (sess.status === 'ended') {
+      
+      // If a demo session ended, reset it back to lobby so audience can replay
+      if (sess.status === 'ended' && (cleanCode === '447161' || cleanCode === '749201')) {
+        sess.status = 'lobby';
+        sess.currentSlideIndex = 0;
+        sess.endedAt = undefined;
+      } else if (sess.status === 'ended') {
         return apiError('This live session has already concluded.', 400);
       }
 
@@ -123,9 +274,9 @@ export async function POST(req: NextRequest) {
 
       await db.execute(`
         UPDATE live_sessions 
-        SET session_data = ? 
+        SET session_data = ?, status = ?
         WHERE code = ?
-      `, [JSON.stringify(sess), cleanCode]);
+      `, [JSON.stringify(sess), sess.status, cleanCode]);
 
       return apiSuccess({ success: true, participant: savedParticipant, session: sess });
     }

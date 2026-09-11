@@ -220,6 +220,95 @@ export const SEED_QUIZZES: Quiz[] = [
         ],
         timeLimitSeconds: 15,
         points: 500
+      },
+      {
+        id: 'q3',
+        type: 'quiz',
+        question: 'In relational databases, which isolation level prevents dirty reads, non-repeatable reads, and phantom reads?',
+        options: [
+          'Read Committed',
+          'Repeatable Read',
+          'Serializable',
+          'Read Uncommitted'
+        ],
+        correctAnswer: 2,
+        explanation: 'Serializable is the highest isolation level and prevents all three concurrency phenomena.',
+        timeLimitSeconds: 20,
+        points: 1000
+      }
+    ]
+  },
+  {
+    id: 'quiz_2',
+    title: 'Data Structures & Algorithms Sprint',
+    topic: 'DSA & Algorithms',
+    difficulty: 'advanced',
+    description: 'High-speed challenges covering Trees, Graphs, Dynamic Programming, and optimal algorithmic complexities.',
+    creatorId: 'user_lead_admin',
+    creatorName: 'Ishpreet Singh (Lead Admin)',
+    createdAt: '2026-03-02T12:00:00Z',
+    playsCount: 980,
+    questions: [
+      {
+        id: 'dsa_1',
+        type: 'quiz',
+        question: 'What is the amortized worst-case time complexity of inserting an element into a dynamic array (like std::vector or ArrayList)?',
+        options: ['O(N)', 'O(log N)', 'O(1)', 'O(N^2)'],
+        correctAnswer: 2,
+        explanation: 'While individual resizing steps cost O(N), resizing by doubling array capacity guarantees O(1) amortized insertion cost.',
+        timeLimitSeconds: 20,
+        points: 1000
+      },
+      {
+        id: 'dsa_2',
+        type: 'quiz',
+        question: 'Which algorithm finds single-source shortest paths on graphs with non-negative edge weights in O((V + E) log V) time?',
+        options: ['Bellman-Ford', "Dijkstra's Algorithm", 'Floyd-Warshall', 'Breadth-First Search'],
+        correctAnswer: 1,
+        explanation: "Dijkstra's algorithm with a min-priority heap runs in O((V + E) log V) on graphs with non-negative weights.",
+        timeLimitSeconds: 20,
+        points: 1000
+      },
+      {
+        id: 'dsa_3',
+        type: 'poll',
+        question: 'Which language do you prefer for LeetCode / competitive programming interviews?',
+        options: ['C++', 'Java', 'Python', 'TypeScript / JavaScript'],
+        timeLimitSeconds: 15,
+        points: 500
+      }
+    ]
+  },
+  {
+    id: 'quiz_3',
+    title: 'AI & Machine Learning Foundations',
+    topic: 'Artificial Intelligence',
+    difficulty: 'beginner',
+    description: 'Explore generative AI architectures, Attention mechanisms, vector databases, and prompt engineering.',
+    creatorId: 'user_lead_admin',
+    creatorName: 'Ishpreet Singh (Lead Admin)',
+    createdAt: '2026-03-03T14:00:00Z',
+    playsCount: 2130,
+    questions: [
+      {
+        id: 'ai_1',
+        type: 'quiz',
+        question: 'What mathematical mechanism allows Transformers to weigh relationships between distant tokens simultaneously in parallel?',
+        options: ['Recurrent Feedback Loop', 'Scaled Dot-Product Self-Attention', 'Convolutional Striding', 'Backpropagation through time'],
+        correctAnswer: 1,
+        explanation: 'Scaled Dot-Product Self-Attention enables transformer models to compute pairwise token interactions without sequential recursion.',
+        timeLimitSeconds: 20,
+        points: 1000
+      },
+      {
+        id: 'ai_2',
+        type: 'quiz',
+        question: 'In Retrieval-Augmented Generation (RAG), which metric is commonly used to measure similarity between high-dimensional embeddings?',
+        options: ['Hamming distance', 'Cosine Similarity', 'Levensthein distance', 'Jaccard Index'],
+        correctAnswer: 1,
+        explanation: 'Cosine similarity measures the cosine of the angle between two non-zero vectors, making it scale-invariant for dense text embeddings.',
+        timeLimitSeconds: 20,
+        points: 1000
       }
     ]
   }
