@@ -32,9 +32,12 @@ export const projectService = {
     }
 
     const rows = await db.queryAll(`
-      SELECT p.*, u.name as author_name, u.avatar as author_avatar
+      SELECT 
+        p.*, 
+        COALESCE(u.name, 'Community Member') as author_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as author_avatar
       FROM projects p
-      JOIN users u ON p.author_id = u.id
+      LEFT JOIN users u ON p.author_id = u.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY p.created_at DESC
       LIMIT ? OFFSET ?
@@ -80,9 +83,14 @@ export const projectService = {
   },
 
   async createProject(data: Partial<Project>, user: User): Promise<Project> {
+    try {
+      const { userService } = await import('./userService');
+      await userService.ensureUserInDb(user);
+    } catch (_) {}
+
     const id = data.id || ('proj_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const approvalStatus: SubmissionStatus = 'pending';
+    const approvalStatus: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
 
     await db.execute(`
       INSERT INTO projects (

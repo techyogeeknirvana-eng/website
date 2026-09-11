@@ -59,6 +59,15 @@ export default function OpportunitiesPage() {
 
   useEffect(() => {
     loadData();
+
+    const interval = setInterval(loadData, 4000);
+    const onFocus = () => { loadData(); };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [currentUser, isAdmin]);
 
   const handleDeleteOpp = async (id: string, e?: React.MouseEvent) => {

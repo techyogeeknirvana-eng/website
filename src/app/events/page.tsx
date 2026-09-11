@@ -53,6 +53,15 @@ export default function EventsPage() {
 
   useEffect(() => {
     loadData();
+
+    const interval = setInterval(loadData, 4000);
+    const onFocus = () => { loadData(); };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [currentUser, isAdmin]);
 
   const handleDeleteEvent = async (id: string, e?: React.MouseEvent) => {

@@ -329,7 +329,56 @@ export const SEED_TECH_RADAR: TechRadarItem[] = [
   }
 ];
 
-export const SEED_COLLAB_REQUESTS: CollabRequest[] = [];
+export const SEED_COLLAB_REQUESTS: CollabRequest[] = [
+  {
+    id: 'collab_seed_1',
+    title: 'Seeking Frontend & UI Architect for Nirvana AI Hackathon',
+    organizerId: 'user_lead_admin',
+    organizerName: 'TechYOGeek Nirvana',
+    organizerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    organizerRole: 'Lead Platform Architect',
+    hackathonOrProject: 'Nirvana Global AI Hackathon 2026',
+    roleNeeded: 'Frontend & UI Specialist',
+    requiredSkills: ['React 19', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Framer Motion'],
+    description: 'Building an autonomous multi-agent dashboard for developer productivity. Looking for an energetic frontend developer to lead glassmorphism UI/UX and interactive charts.',
+    deadline: 'March 25, 2026',
+    applicantsCount: 3,
+    status: 'open',
+    createdAt: '2026-03-01'
+  },
+  {
+    id: 'collab_seed_2',
+    title: 'Need PyTorch & LLM Engineer for Agentic RAG Pipeline',
+    organizerId: 'user_lead_admin',
+    organizerName: 'Priya Sharma',
+    organizerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    organizerRole: 'AI Researcher',
+    hackathonOrProject: 'Open Source Neural Agents',
+    roleNeeded: 'AI / Machine Learning Engineer',
+    requiredSkills: ['Python', 'PyTorch', 'LangChain', 'FastAPI', 'Vector Databases'],
+    description: 'Designing low-latency streaming agent workflows with hybrid semantic retrieval and evaluation harnesses. Teammate will optimize embeddings and prompt topologies.',
+    deadline: 'April 05, 2026',
+    applicantsCount: 5,
+    status: 'open',
+    createdAt: '2026-03-03'
+  },
+  {
+    id: 'collab_seed_3',
+    title: 'Looking for Cloud / DevOps Engineer for Distributed CTF Platform',
+    organizerId: 'user_lead_admin',
+    organizerName: 'Rohan Verma',
+    organizerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    organizerRole: 'Security Engineer',
+    hackathonOrProject: 'Nirvana Cyber Challenge 2026',
+    roleNeeded: 'Cloud & Infrastructure Engineer',
+    requiredSkills: ['Docker', 'Kubernetes', 'AWS', 'Linux', 'Terraform'],
+    description: 'Setting up sandboxed containerized challenge runners that automatically spin up and tear down vulnerable targets for real-time cybersecurity competitions.',
+    deadline: 'April 12, 2026',
+    applicantsCount: 2,
+    status: 'open',
+    createdAt: '2026-03-05'
+  }
+];
 
 export const SEED_LEARNING_PATHS: LearningPath[] = [
   {

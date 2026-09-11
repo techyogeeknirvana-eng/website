@@ -3,7 +3,7 @@
  * Centralized HTTP communication layer for all frontend components.
  */
 
-import { User, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Project, CreditWallet, SystemAnnouncement, AuditLog, ContentReport, LiveSession, LiveParticipant } from '@/types';
+import { User, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Project, CreditWallet, SystemAnnouncement, AuditLog, ContentReport, LiveSession, LiveParticipant, CollabRequest } from '@/types';
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<{ data: T | null; error: string | null; pagination?: any }> {
   try {
@@ -368,6 +368,31 @@ export const api = {
           status,
           nextSlideIndex,
         }),
+      }),
+  },
+
+  // Collab Finder
+  collab: {
+    list: (status?: string, limit = 100) =>
+      request<CollabRequest[]>(`/api/collab?limit=${limit}${status ? `&status=${status}` : ''}`),
+    create: (data: Partial<CollabRequest>) =>
+      request<CollabRequest>('/api/collab', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    apply: (id: string) =>
+      request<{ success: boolean; applicantsCount: number }>('/api/collab', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'apply', id }),
+      }),
+    updateStatus: (id: string, status: 'open' | 'filled') =>
+      request<{ success: boolean }>('/api/collab', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'status', id, status }),
+      }),
+    delete: (id: string) =>
+      request<{ success: boolean; message: string }>(`/api/collab?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
       }),
   },
 };

@@ -28,9 +28,13 @@ export const chatService = {
     }
 
     const rows = await db.queryAll(`
-      SELECT m.*, u.name as user_name, u.avatar as user_avatar, u.role as user_role
+      SELECT 
+        m.*, 
+        COALESCE(u.name, 'Community Member') as user_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as user_avatar, 
+        COALESCE(u.role, 'USER') as user_role
       FROM community_messages m
-      JOIN users u ON m.user_id = u.id
+      LEFT JOIN users u ON m.user_id = u.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY m.created_at DESC
       LIMIT ?
@@ -74,15 +78,31 @@ export const chatService = {
     content: string,
     user: User,
     codeSnippet?: { language: string; code: string },
-    replyToId?: string
+    replyToId?: string,
+    customId?: string
   ): Promise<CommunityMessage> {
-    // Enforce 1 credit cost per message
-    const deductRes = await creditService.deductCredits(user.id, 1, `Message in #${channelSlug}`, 'chat');
-    if (!deductRes.success) {
-      throw new Error('Insufficient credits. You need 1 credit to post a message in the community.');
+    // Ensure user row exists in DB to prevent foreign key errors
+    try {
+      const { userService } = await import('./userService');
+      await userService.ensureUserInDb(user);
+    } catch (_) {}
+
+    // Deduct 1 credit for regular users (admins post free, soft fallback for newly created wallets)
+    if (user.role !== 'ADMIN') {
+      try {
+        const deductRes = await creditService.deductCredits(user.id, 1, `Message in #${channelSlug}`, 'chat');
+        if (!deductRes.success && deductRes.error === 'Insufficient credit balance.') {
+          throw new Error('Insufficient credits. You need 1 credit to post a message in the community.');
+        }
+      } catch (err: any) {
+        if (err.message?.includes('Insufficient credits')) {
+          throw err;
+        }
+        console.warn('Credit deduction non-critical warning:', err);
+      }
     }
 
-    const id = 'msg_' + crypto.randomUUID().slice(0, 10);
+    const id = customId || ('msg_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
 
     await db.execute(`

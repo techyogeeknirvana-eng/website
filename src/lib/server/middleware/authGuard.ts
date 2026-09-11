@@ -103,6 +103,23 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
           [userEmailHeader.toLowerCase().trim()]
         );
       }
+      // If user session header is provided but user record does not exist yet in this DB, auto-provision it
+      if (!targetRow && (userIdHeader || userEmailHeader)) {
+        const { userService } = await import('../services/userService');
+        const email = (userEmailHeader || `${userIdHeader || 'user'}@tygn.dev`).toLowerCase().trim();
+        const displayName = formatNameFromEmail(email);
+        await userService.ensureUserInDb({
+          id: userIdHeader || `user_${Date.now()}`,
+          email,
+          name: displayName,
+          role: 'USER',
+          username: email.split('@')[0].replace(/[^a-z0-9_]/g, '') || 'user',
+        });
+        targetRow = await db.queryOne('SELECT * FROM users WHERE id = ? OR LOWER(email) = ?', [
+          userIdHeader || '',
+          email
+        ]);
+      }
     } catch (_) {}
   }
 

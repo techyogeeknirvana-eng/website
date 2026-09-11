@@ -190,6 +190,47 @@ export async function runMigrations(): Promise<void> {
         `, [JSON.stringify(sessionObj), demo.code]);
       }
     }
+
+    // Ensure collab_requests schema compatibility columns
+    try {
+      await db.execute('ALTER TABLE collab_requests ADD COLUMN applicants_count INTEGER DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE collab_requests ADD COLUMN organizer_name TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE collab_requests ADD COLUMN organizer_avatar TEXT');
+    } catch (_) {}
+
+    // Seed Collab Requests if table is empty
+    const collabCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM collab_requests');
+    if (!collabCount || Number(collabCount.count) === 0) {
+      const { SEED_COLLAB_REQUESTS } = await import('@/lib/db/seedData');
+      for (const req of SEED_COLLAB_REQUESTS) {
+        await db.execute(`
+          INSERT INTO collab_requests (
+            id, title, organizer_id, organizer_name, organizer_avatar, organizer_role,
+            hackathon_or_project, role_needed, required_skills, description, deadline,
+            status, applicants_count, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          req.id,
+          req.title,
+          req.organizerId || 'user_lead_admin',
+          req.organizerName || 'TechYOGeek Nirvana',
+          req.organizerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          req.organizerRole || 'Lead Platform Architect',
+          req.hackathonOrProject,
+          req.roleNeeded,
+          JSON.stringify(req.requiredSkills || []),
+          req.description,
+          req.deadline,
+          req.status || 'open',
+          req.applicantsCount || 0,
+          req.createdAt || now
+        ]);
+      }
+    }
   } catch (err) {
     console.warn('Migration hook skipped/deferred:', err);
   }

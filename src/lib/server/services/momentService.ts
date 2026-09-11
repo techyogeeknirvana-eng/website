@@ -17,9 +17,13 @@ export const momentService = {
     }
 
     const rows = await db.queryAll(`
-      SELECT m.*, u.name as user_name, u.avatar as user_avatar, u.title as user_title
+      SELECT 
+        m.*, 
+        COALESCE(u.name, 'Community Member') as user_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as user_avatar, 
+        COALESCE(u.title, 'Developer & Member') as user_title
       FROM nirvana_moments m
-      JOIN users u ON m.user_id = u.id
+      LEFT JOIN users u ON m.user_id = u.id
       WHERE ${whereClause}
       ORDER BY m.created_at DESC
       LIMIT ? OFFSET ?
@@ -38,9 +42,12 @@ export const momentService = {
       }
 
       const commentRows = await db.queryAll(`
-        SELECT c.*, u.name as user_name, u.avatar as user_avatar
+        SELECT 
+          c.*, 
+          COALESCE(u.name, 'Community Member') as user_name, 
+          COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as user_avatar
         FROM moment_comments c
-        JOIN users u ON c.user_id = u.id
+        LEFT JOIN users u ON c.user_id = u.id
         WHERE c.moment_id IN (${placeholders})
         ORDER BY c.created_at ASC
       `, momentIds);
@@ -86,9 +93,14 @@ export const momentService = {
   },
 
   async createMoment(content: string, category: string, imageUrl: string | undefined, user: User, idOverride?: string): Promise<NirvanaMoment> {
+    try {
+      const { userService } = await import('./userService');
+      await userService.ensureUserInDb(user);
+    } catch (_) {}
+
     const id = idOverride || ('moment_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'pending';
+    const status: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
 
     await db.execute(`
       INSERT INTO nirvana_moments (id, user_id, content, category, image_url, status, created_at, updated_at)

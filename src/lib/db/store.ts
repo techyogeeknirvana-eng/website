@@ -269,7 +269,9 @@ class DataStore {
         annRes,
         momentsRes,
         projRes,
-        usersRes
+        usersRes,
+        collabRes,
+        messagesRes
       ] = await Promise.allSettled([
         fetch('/api/opportunities?limit=100').then(r => r.ok ? r.json() : null),
         fetch('/api/opportunities?status=pending&limit=100').then(r => r.ok ? r.json() : null),
@@ -279,6 +281,8 @@ class DataStore {
         fetch('/api/moments?includePending=true&limit=100').then(r => r.ok ? r.json() : null),
         fetch('/api/projects?includePending=true&limit=100').then(r => r.ok ? r.json() : null),
         fetch('/api/users').then(r => r.ok ? r.json() : null),
+        fetch('/api/collab?limit=100').then(r => r.ok ? r.json() : null),
+        fetch('/api/community?channel=general&limit=100').then(r => r.ok ? r.json() : null),
       ]);
 
       // Merge opportunities (approved + pending)
@@ -330,6 +334,24 @@ class DataStore {
 
       if (usersRes.status === 'fulfilled' && usersRes.value?.data?.length) {
         this.setUsers(usersRes.value.data);
+      }
+
+      // Merge Collab Requests
+      const collabMap = new Map<string, CollabRequest>();
+      this.collabRequests.forEach(c => collabMap.set(c.id, c));
+      if (collabRes.status === 'fulfilled' && collabRes.value?.data?.length) {
+        collabRes.value.data.forEach((c: CollabRequest) => collabMap.set(c.id, c));
+      }
+      this.collabRequests = Array.from(collabMap.values());
+      this.save(STORAGE_KEYS.COLLAB, this.collabRequests);
+
+      // Merge Community Messages
+      if (messagesRes.status === 'fulfilled' && messagesRes.value?.data?.messages?.length) {
+        const msgMap = new Map<string, CommunityMessage>();
+        this.messages.forEach(m => msgMap.set(m.id, m));
+        messagesRes.value.data.messages.forEach((m: CommunityMessage) => msgMap.set(m.id, m));
+        this.messages = Array.from(msgMap.values());
+        this.save(STORAGE_KEYS.MESSAGES, this.messages);
       }
 
       // Sync active user wallet & token transactions
@@ -866,13 +888,22 @@ class DataStore {
     };
     this.messages.push(newMsg);
     this.save(STORAGE_KEYS.MESSAGES, this.messages);
-    this.syncApi('/api/community', 'POST', newMsg);
+    this.syncApi('/api/community', 'POST', { id: newMsg.id, channelSlug: newMsg.channelSlug, content: newMsg.content });
     this.addXP(msgData.userId, 10);
     return newMsg;
   }
 
   public addMessage(msgData: Omit<CommunityMessage, 'id' | 'timestamp' | 'reactions'>): CommunityMessage {
     return this.sendMessage(msgData);
+  }
+
+  public mergeMessages(incoming: CommunityMessage[]): void {
+    if (!incoming || incoming.length === 0) return;
+    const msgMap = new Map<string, CommunityMessage>();
+    this.messages.forEach(m => msgMap.set(m.id, m));
+    incoming.forEach(m => msgMap.set(m.id, m));
+    this.messages = Array.from(msgMap.values());
+    this.save(STORAGE_KEYS.MESSAGES, this.messages);
   }
 
   public toggleReaction(msgId: string, emoji: string, userId: string) {
@@ -893,7 +924,7 @@ class DataStore {
       }
     }
     this.save(STORAGE_KEYS.MESSAGES, this.messages);
-    this.syncApi('/api/community', 'POST', { action: 'react', messageId: msgId, emoji, userId });
+    this.syncApi('/api/community', 'POST', { action: 'reaction', messageId: msgId, emoji, userId });
   }
 
   public deleteMessage(msgId: string, adminUser: User): boolean {
@@ -1568,6 +1599,17 @@ class DataStore {
     return [...this.collabRequests];
   }
 
+  public setCollabRequests(requests: CollabRequest[]): void {
+    if (!requests) return;
+    const collabMap = new Map<string, CollabRequest>();
+    this.collabRequests.forEach(c => collabMap.set(c.id, c));
+    requests.forEach(c => collabMap.set(c.id, c));
+    this.collabRequests = Array.from(collabMap.values()).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    this.save(STORAGE_KEYS.COLLAB, this.collabRequests);
+  }
+
   public addCollabRequest(req: Omit<CollabRequest, 'id' | 'createdAt' | 'applicantsCount' | 'status'>, author: User): CollabRequest {
     const newReq: CollabRequest = {
       ...req,
@@ -1578,6 +1620,7 @@ class DataStore {
     };
     this.collabRequests.unshift(newReq);
     this.save(STORAGE_KEYS.COLLAB, this.collabRequests);
+    this.syncApi('/api/collab', 'POST', newReq);
     this.addXP(author.id, 30);
     return newReq;
   }

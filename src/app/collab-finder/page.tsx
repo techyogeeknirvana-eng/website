@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Sparkles, 
@@ -15,6 +15,7 @@ import { dbStore } from '@/lib/db/store';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { CollabRequest } from '@/types';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { api } from '@/lib/client/api';
 
 export default function CollabFinderPage() {
   const { currentUser } = useAuth();
@@ -30,36 +31,71 @@ export default function CollabFinderPage() {
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('March 18, 2026');
 
-  const handleCreateCollab = (e: React.FormEvent) => {
+  const fetchCollabsFromServer = async () => {
+    try {
+      const res = await api.collab.list();
+      if (res.data && Array.isArray(res.data)) {
+        dbStore.setCollabRequests(res.data);
+        setRequests(res.data);
+      }
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    fetchCollabsFromServer();
+
+    // 3.5s polling loop for real-time cross-account synchronization
+    const interval = setInterval(fetchCollabsFromServer, 3500);
+
+    const onFocus = () => {
+      fetchCollabsFromServer();
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  const handleCreateCollab = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     soundEffects.playSuccess();
 
-    const created = dbStore.addCollabRequest(
-      {
-        title,
-        organizerId: currentUser.id,
-        organizerName: currentUser.name,
-        organizerAvatar: currentUser.avatar,
-        organizerRole: currentUser.title,
-        hackathonOrProject,
-        roleNeeded,
-        requiredSkills: requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
-        description,
-        deadline,
-      },
-      currentUser
-    );
+    const payload = {
+      title,
+      organizerId: currentUser.id,
+      organizerName: currentUser.name,
+      organizerAvatar: currentUser.avatar,
+      organizerRole: currentUser.title,
+      hackathonOrProject,
+      roleNeeded,
+      requiredSkills: requiredSkills.split(',').map(s => s.trim()).filter(Boolean),
+      description,
+      deadline,
+    };
 
+    const created = dbStore.addCollabRequest(payload, currentUser);
     setRequests(prev => [created, ...prev]);
     setModalOpen(false);
     setTitle('');
     setDescription('');
+
+    try {
+      await api.collab.create({ ...payload, id: created.id });
+      fetchCollabsFromServer();
+    } catch (_) {}
   };
 
-  const handleApply = (id: string) => {
+  const handleApply = async (id: string) => {
     soundEffects.playSuccess();
     setAppliedIds(prev => [...prev, id]);
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, applicantsCount: r.applicantsCount + 1 } : r));
+    try {
+      await api.collab.apply(id);
+      fetchCollabsFromServer();
+    } catch (_) {}
     alert('Collaboration request sent! The organizer has been notified on the platform.');
   };
 

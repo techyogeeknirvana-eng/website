@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const { action, channelSlug, content, codeSnippet, replyToId, messageId, emoji } = body;
 
     // 1. Reaction toggle
-    if (action === 'reaction') {
+    if (action === 'reaction' || action === 'react') {
       if (!messageId || !emoji) {
         return apiError('messageId and emoji are required.', 400);
       }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       return apiError('channelSlug and content are required.', 400);
     }
 
-    const message = await chatService.postMessage(channelSlug, content, authUser, codeSnippet, replyToId);
+    const message = await chatService.postMessage(channelSlug, content, authUser, codeSnippet, replyToId, body.id);
     return apiSuccess(message, 201);
   } catch (err: any) {
     return apiError(err.message || 'Failed to post message', 400);

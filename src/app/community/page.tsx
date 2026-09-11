@@ -43,20 +43,62 @@ export default function CommunityPage() {
   const [editContent, setEditContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    setChannels(dbStore.getChannels());
-    setOnlineMembers(dbStore.getUsers());
-    loadMessages('general');
-  }, []);
+  const activeSlugRef = useRef(activeChannelSlug);
+  activeSlugRef.current = activeChannelSlug;
+
+  const fetchServerMessages = async (slug: string, autoScroll = false) => {
+    try {
+      const res = await fetch(`/api/community?channel=${encodeURIComponent(slug)}&limit=100`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data?.messages) {
+          const serverMsgs: CommunityMessage[] = json.data.messages;
+          dbStore.mergeMessages(serverMsgs);
+          if (activeSlugRef.current === slug) {
+            setMessages(serverMsgs);
+            if (autoScroll) {
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 60);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  };
 
   const loadMessages = (slug: string) => {
     setActiveChannelSlug(slug);
+    activeSlugRef.current = slug;
     const msgs = dbStore.getMessages(slug);
     setMessages([...msgs]);
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
+    fetchServerMessages(slug, true);
   };
+
+  useEffect(() => {
+    setChannels(dbStore.getChannels());
+    setOnlineMembers(dbStore.getUsers());
+    loadMessages('general');
+
+    // Real-time polling loop every 2.5 seconds for instant cross-account chat synchronization
+    const interval = setInterval(() => {
+      fetchServerMessages(activeSlugRef.current, false);
+    }, 2500);
+
+    // Immediate sync on tab/window focus
+    const onFocus = () => {
+      fetchServerMessages(activeSlugRef.current, false);
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   const handleChannelSwitch = (slug: string) => {
     soundEffects.playClick();
@@ -100,11 +142,16 @@ export default function CommunityPage() {
     setInputText('');
     setSnippetCode('');
     setCodeSnippetOpen(false);
-    setMessages([...messages, newMsg]);
+    setMessages(prev => [...prev, newMsg]);
 
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
+
+    // Immediate server sync to guarantee persistence across all instances
+    setTimeout(() => {
+      fetchServerMessages(activeChannelSlug, false);
+    }, 400);
   };
 
   const handleReaction = (messageId: string, emoji: string) => {
@@ -113,6 +160,7 @@ export default function CommunityPage() {
     dbStore.toggleReaction(messageId, emoji, currentUser.id);
     const updated = dbStore.getMessages(activeChannelSlug);
     setMessages([...updated]);
+    setTimeout(() => fetchServerMessages(activeChannelSlug, false), 400);
   };
 
   const handleDeleteMessage = async (messageId: string) => {

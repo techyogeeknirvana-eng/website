@@ -33,9 +33,39 @@ export default function ProjectsPage() {
   const [submittedNotice, setSubmittedNotice] = useState<string>('');
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
+  const fetchProjectsFromServer = async () => {
+    try {
+      const res = await api.projects.list(selectedCategory, true);
+      if (res.data && Array.isArray(res.data)) {
+        const projMap = new Map<string, Project>();
+        dbStore.getProjects(true, currentUser?.id).forEach(p => projMap.set(p.id, p));
+        res.data.forEach((p: Project) => projMap.set(p.id, p));
+        const merged = Array.from(projMap.values()).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        const visible = isAdmin ? merged : merged.filter(p => p.approvalStatus === 'approved' || p.authorId === currentUser?.id);
+        setProjects(visible);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     setProjects(dbStore.getProjects(isAdmin, currentUser?.id));
-  }, [currentUser, isAdmin]);
+    fetchProjectsFromServer();
+
+    // 4s polling loop for cross-account synchronization
+    const interval = setInterval(fetchProjectsFromServer, 4000);
+
+    const onFocus = () => {
+      fetchProjectsFromServer();
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [currentUser, isAdmin, selectedCategory]);
 
   // New Project Form state
   const [title, setTitle] = useState('');
@@ -128,6 +158,7 @@ export default function ProjectsPage() {
       setSubmittedNotice('⏳ Project submitted for Admin Review! It will appear on the showcase once approved by an administrator.');
     }
     setTimeout(() => setSubmittedNotice(''), 9000);
+    setTimeout(fetchProjectsFromServer, 500);
   };
 
   const filtered = projects.filter(p => {

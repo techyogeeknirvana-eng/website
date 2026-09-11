@@ -37,8 +37,38 @@ export default function NirvanaMomentsPage() {
   const [submittedNotice, setSubmittedNotice] = useState<string>('');
   const [editingMoment, setEditingMoment] = useState<NirvanaMoment | null>(null);
 
+  const fetchMomentsFromServer = async () => {
+    try {
+      const res = await api.moments.list(50, 0, true);
+      if (res.data && Array.isArray(res.data)) {
+        const momentMap = new Map<string, NirvanaMoment>();
+        dbStore.getMoments(true, currentUser?.id).forEach(m => momentMap.set(m.id, m));
+        res.data.forEach((m: NirvanaMoment) => momentMap.set(m.id, m));
+        const merged = Array.from(momentMap.values()).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        const visible = isAdmin ? merged : merged.filter(m => m.status === 'approved' || m.userId === currentUser?.id);
+        setMoments(visible);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     setMoments(dbStore.getMoments(isAdmin, currentUser?.id));
+    fetchMomentsFromServer();
+
+    // 4s polling loop for cross-account synchronization
+    const interval = setInterval(fetchMomentsFromServer, 4000);
+
+    const onFocus = () => {
+      fetchMomentsFromServer();
+    };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [currentUser, isAdmin]);
 
   // AI auto-categorization when creating a moment
@@ -76,6 +106,7 @@ export default function NirvanaMomentsPage() {
       setSubmittedNotice('⏳ Moment submitted for Admin Review! It will appear on the public feed once approved by an administrator.');
     }
     setTimeout(() => setSubmittedNotice(''), 9000);
+    setTimeout(fetchMomentsFromServer, 500);
   };
 
   const handleApprove = async (id: string) => {
