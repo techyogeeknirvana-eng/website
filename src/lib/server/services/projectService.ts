@@ -90,7 +90,7 @@ export const projectService = {
 
     const id = data.id || ('proj_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const approvalStatus: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
+    const approvalStatus: SubmissionStatus = 'approved';
 
     await db.execute(`
       INSERT INTO projects (

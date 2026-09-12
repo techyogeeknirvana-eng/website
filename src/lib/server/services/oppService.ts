@@ -94,9 +94,13 @@ export const oppService = {
     `, params);
 
     const rows = await db.queryAll(`
-      SELECT o.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
+      SELECT o.*, 
+        COALESCE(u.id, o.posted_by_user_id) as poster_id, 
+        COALESCE(u.name, 'Community Member') as poster_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as poster_avatar, 
+        COALESCE(u.role, 'USER') as poster_role
       FROM opportunities o
-      JOIN users u ON o.posted_by_user_id = u.id
+      LEFT JOIN users u ON o.posted_by_user_id = u.id
       WHERE ${whereClause}
       ORDER BY o.created_at DESC
       LIMIT ? OFFSET ?
@@ -113,7 +117,7 @@ export const oppService = {
   async createOpportunity(data: Partial<Opportunity>, user: User): Promise<Opportunity> {
     const id = data.id || ('opp_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'pending';
+    const status: SubmissionStatus = 'approved';
 
     await db.execute(`
       INSERT INTO opportunities (

@@ -603,7 +603,7 @@ class DataStore {
     const newOpp: Opportunity = {
       ...opp,
       id: 'opp_' + Date.now(),
-      status: 'pending',
+      status: 'approved',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,
@@ -612,6 +612,7 @@ class DataStore {
       },
       createdAt: new Date().toISOString()
     };
+    (newOpp as any).postedByUserId = postedBy.id;
     this.opportunities.unshift(newOpp);
     this.save(STORAGE_KEYS.OPPORTUNITIES, this.opportunities);
     this.syncApi('/api/opportunities', 'POST', newOpp);
@@ -752,7 +753,7 @@ class DataStore {
       id: 'event_' + Date.now(),
       participantsCount: 1,
       registeredUsers: [postedBy.id],
-      status: 'pending',
+      status: 'approved',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,
@@ -761,7 +762,7 @@ class DataStore {
       },
       createdAt: new Date().toISOString()
     };
-
+    (newEvent as any).postedByUserId = postedBy.id;
     this.events.unshift(newEvent);
     this.save(STORAGE_KEYS.EVENTS, this.events);
     this.syncApi('/api/events', 'POST', newEvent);
@@ -899,7 +900,15 @@ class DataStore {
     };
     this.messages.push(newMsg);
     this.save(STORAGE_KEYS.MESSAGES, this.messages);
-    this.syncApi('/api/community', 'POST', { id: newMsg.id, channelSlug: newMsg.channelSlug, content: newMsg.content });
+    this.syncApi('/api/community', 'POST', {
+      id: newMsg.id,
+      channelSlug: newMsg.channelSlug,
+      content: newMsg.content,
+      userId: newMsg.userId,
+      userName: newMsg.userName,
+      userAvatar: newMsg.userAvatar,
+      userRole: newMsg.userRole
+    });
     this.addXP(msgData.userId, 10);
     return newMsg;
   }

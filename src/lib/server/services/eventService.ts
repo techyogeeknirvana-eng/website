@@ -91,9 +91,13 @@ export const eventService = {
     `, params);
 
     const rows = await db.queryAll(`
-      SELECT e.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
+      SELECT e.*, 
+        COALESCE(u.id, e.posted_by_user_id) as poster_id, 
+        COALESCE(u.name, 'Community Member') as poster_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as poster_avatar, 
+        COALESCE(u.role, 'USER') as poster_role
       FROM community_events e
-      JOIN users u ON e.posted_by_user_id = u.id
+      LEFT JOIN users u ON e.posted_by_user_id = u.id
       WHERE ${whereClause}
       ORDER BY e.created_at DESC
       LIMIT ? OFFSET ?
@@ -110,7 +114,7 @@ export const eventService = {
   async createEvent(data: Partial<CommunityEvent>, user: User): Promise<CommunityEvent> {
     const id = data.id || ('event_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'pending';
+    const status: SubmissionStatus = 'approved';
 
     await db.execute(`
       INSERT INTO community_events (
