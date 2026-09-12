@@ -5,6 +5,7 @@ import { apiSuccess, apiError, apiPaginated } from '@/lib/server/utils/response'
 
 export async function GET(req: NextRequest) {
   try {
+    const authUser = await extractAuthUser(req);
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') as any;
     const type = searchParams.get('type') || undefined;
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
       isRemote,
       page,
       limit,
+      userId: authUser?.id,
     });
 
     const totalPages = Math.ceil(total / limit);

@@ -272,6 +272,26 @@ class DataStore {
   public async syncWithBackend() {
     if (typeof window === 'undefined') return;
     try {
+      const token = localStorage.getItem('tygn_session_token');
+      let activeUserId = localStorage.getItem('tygn_active_user_id');
+      let activeUserEmail = localStorage.getItem('tygn_active_user_email');
+
+      if ((!activeUserId || !activeUserEmail) && typeof window !== 'undefined') {
+        try {
+          const prof = localStorage.getItem('tygn_user_profile');
+          if (prof) {
+            const parsed = JSON.parse(prof);
+            if (parsed.id && !activeUserId) activeUserId = parsed.id;
+            if (parsed.email && !activeUserEmail) activeUserEmail = parsed.email;
+          }
+        } catch (_) {}
+      }
+
+      const headers: Record<string, string> = {};
+      if (token && token !== 'tygn_server_session_active') headers['Authorization'] = `Bearer ${token}`;
+      if (activeUserId) headers['x-user-id'] = activeUserId;
+      if (activeUserEmail) headers['x-user-email'] = activeUserEmail;
+
       const [
         oppsRes,
         pendingOppsRes,
@@ -284,16 +304,16 @@ class DataStore {
         collabRes,
         messagesRes
       ] = await Promise.allSettled([
-        fetch('/api/opportunities?limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/opportunities?status=pending&limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/events?limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/events?status=pending&limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/announcements').then(r => r.ok ? r.json() : null),
-        fetch('/api/moments?includePending=true&limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/projects?includePending=true&limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/users').then(r => r.ok ? r.json() : null),
-        fetch('/api/collab?limit=100').then(r => r.ok ? r.json() : null),
-        fetch('/api/community?channel=general&limit=100').then(r => r.ok ? r.json() : null),
+        fetch('/api/opportunities?limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/opportunities?status=pending&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/events?limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/events?status=pending&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/announcements', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/moments?includePending=true&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/projects?includePending=true&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/users', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/collab?limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch('/api/community?channel=general&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
       ]);
 
       // Merge opportunities (approved + pending)
@@ -603,7 +623,7 @@ class DataStore {
     const newOpp: Opportunity = {
       ...opp,
       id: 'opp_' + Date.now(),
-      status: 'approved',
+      status: postedBy.role === 'ADMIN' ? 'approved' : 'pending',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,
@@ -753,7 +773,7 @@ class DataStore {
       id: 'event_' + Date.now(),
       participantsCount: 1,
       registeredUsers: [postedBy.id],
-      status: 'approved',
+      status: postedBy.role === 'ADMIN' ? 'approved' : 'pending',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,
@@ -1012,7 +1032,7 @@ class DataStore {
     momentData: Omit<NirvanaMoment, 'id' | 'createdAt' | 'likesCount' | 'likedBy' | 'comments' | 'userId' | 'userName' | 'userAvatar' | 'userTitle' | 'status' | 'rejectionReason'>,
     author: User
   ): NirvanaMoment {
-    const status: SubmissionStatus = 'approved';
+    const status: SubmissionStatus = author.role === 'ADMIN' ? 'approved' : 'pending';
     const newMoment: NirvanaMoment = {
       ...momentData,
       id: 'moment_' + Date.now(),
@@ -1157,7 +1177,7 @@ class DataStore {
     projData: Omit<Project, 'id' | 'createdAt' | 'likes' | 'likedBy' | 'authorId' | 'authorName' | 'authorAvatar' | 'approvalStatus' | 'rejectionReason'>,
     author: User
   ): Project {
-    const approvalStatus: SubmissionStatus = 'approved';
+    const approvalStatus: SubmissionStatus = author.role === 'ADMIN' ? 'approved' : 'pending';
     const newProj: Project = {
       ...projData,
       id: 'proj_' + Date.now(),

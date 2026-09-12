@@ -19,6 +19,7 @@ export interface OpportunityFilter {
   isRemote?: boolean;
   page?: number;
   limit?: number;
+  userId?: string;
 }
 
 export const oppService = {
@@ -66,6 +67,9 @@ export const oppService = {
     if (filter.status) {
       conditions.push('o.status = ?');
       params.push(filter.status);
+    } else if (filter.userId) {
+      conditions.push("(o.status = 'approved' OR o.posted_by_user_id = ?)");
+      params.push(filter.userId);
     } else {
       // Default to approved if not filtering
       conditions.push("o.status = 'approved'");
@@ -117,7 +121,7 @@ export const oppService = {
   async createOpportunity(data: Partial<Opportunity>, user: User): Promise<Opportunity> {
     const id = data.id || ('opp_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'approved';
+    const status: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
 
     await db.execute(`
       INSERT INTO opportunities (

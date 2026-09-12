@@ -45,7 +45,9 @@ export default function EventsPage() {
       const res = await api.events.list({ limit: 100 });
       if (res.data) {
         dbStore.setEvents(res.data);
-        const filtered = isAdmin ? res.data : res.data.filter(e => e.status === 'approved');
+        const filtered = isAdmin 
+          ? res.data 
+          : res.data.filter(e => e.status === 'approved' || e.postedBy?.id === currentUser?.id);
         setEvents(filtered);
       }
     } catch (_) {}
@@ -262,6 +264,29 @@ export default function EventsPage() {
             >
               {/* Event Banner */}
               <div style={{ position: 'relative', height: '180px', width: '100%' }}>
+                {evt.status === 'pending' && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'rgba(234, 179, 8, 0.92)',
+                      color: '#000',
+                      padding: '6px 12px',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      zIndex: 3,
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    <Clock size={14} />
+                    <span>⏳ PENDING ADMIN APPROVAL</span>
+                  </div>
+                )}
                 <img
                   src={evt.bannerImage}
                   alt={evt.title}
@@ -271,7 +296,7 @@ export default function EventsPage() {
                   className="badge badge-amber"
                   style={{
                     position: 'absolute',
-                    top: '12px',
+                    top: evt.status === 'pending' ? '36px' : '12px',
                     left: '12px',
                     fontSize: '0.74rem',
                     fontWeight: 700,

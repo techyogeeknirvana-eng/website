@@ -50,7 +50,9 @@ export default function OpportunitiesPage() {
       const res = await api.opportunities.list({ limit: 100 });
       if (res.data) {
         dbStore.setOpportunities(res.data);
-        const filtered = isAdmin ? res.data : res.data.filter(o => o.status === 'approved');
+        const filtered = isAdmin 
+          ? res.data 
+          : res.data.filter(o => o.status === 'approved' || o.postedBy?.id === currentUser?.id);
         setOpportunities(filtered);
         if (filtered.length > 0 && !selectedOpp) setSelectedOpp(filtered[0]);
       }
@@ -308,10 +310,30 @@ export default function OpportunitiesPage() {
                   style={{
                     padding: '22px',
                     cursor: 'pointer',
+                    position: 'relative',
                     border: isSelected ? '1px solid var(--accent-indigo)' : '1px solid var(--border-subtle)',
                     background: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-glass-card)',
                   }}
                 >
+                  {opp.status === 'pending' && (
+                    <div
+                      style={{
+                        background: 'rgba(234, 179, 8, 0.92)',
+                        color: '#000',
+                        padding: '4px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        borderRadius: '4px',
+                        marginBottom: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Clock size={13} />
+                      <span>⏳ PENDING ADMIN APPROVAL</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       <img

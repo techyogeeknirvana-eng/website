@@ -231,14 +231,6 @@ export async function runMigrations(): Promise<void> {
         ]);
       }
     }
-
-    // Ensure all existing community posts have approved status so all accounts see them
-    try {
-      await db.execute("UPDATE nirvana_moments SET status = 'approved' WHERE status = 'pending' OR status IS NULL");
-      await db.execute("UPDATE projects SET approval_status = 'approved' WHERE approval_status = 'pending' OR approval_status IS NULL");
-      await db.execute("UPDATE community_events SET status = 'approved' WHERE status = 'pending' OR status IS NULL");
-      await db.execute("UPDATE opportunities SET status = 'approved' WHERE status = 'pending' OR status IS NULL");
-    } catch (_) {}
   } catch (err) {
     console.warn('Migration hook skipped/deferred:', err);
   }

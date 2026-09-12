@@ -159,7 +159,12 @@ export default function ProjectsPage() {
     setTitle('');
     setDescription('');
 
-    setSubmittedNotice('🚀 Project published directly to showcase!');
+    const isNowAdmin = currentUser.role === 'ADMIN';
+    setSubmittedNotice(
+      isNowAdmin
+        ? '🚀 Project published directly to showcase!'
+        : '⏳ Project submitted for Admin Approval! It is visible to you below with a "Pending" badge and will be publicly published to everyone once approved.'
+    );
     setTimeout(() => setSubmittedNotice(''), 9000);
   };
 

@@ -100,7 +100,7 @@ export const momentService = {
 
     const id = idOverride || ('moment_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'approved';
+    const status: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
 
     await db.execute(`
       INSERT INTO nirvana_moments (id, user_id, content, category, image_url, status, created_at, updated_at)

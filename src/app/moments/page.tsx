@@ -106,8 +106,12 @@ export default function NirvanaMomentsPage() {
       return Array.from(map.values());
     });
     setPostContent('');
-
-    setSubmittedNotice('🚀 Moment published directly to community feed!');
+    const isNowAdmin = currentUser.role === 'ADMIN';
+    setSubmittedNotice(
+      isNowAdmin
+        ? '🚀 Moment published directly to community feed!'
+        : '⏳ Moment submitted for Admin Approval! It is visible to you below and will be publicly visible to everyone once approved.'
+    );
     setTimeout(() => setSubmittedNotice(''), 9000);
   };
 
