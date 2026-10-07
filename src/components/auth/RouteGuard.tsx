@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/auth',
   '/about',
   '/about-public',
+  '/features',
   '/robots.txt',
   '/sitemap.xml',
 ];

@@ -12,6 +12,7 @@ import { BroadcastModal } from '@/components/announcements/BroadcastModal';
 
 import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
 import { ThemeCustomizerModal } from '@/components/theme/ThemeCustomizerModal';
+import { BreadcrumbBar } from '@/components/layout/BreadcrumbBar';
 
 export const metadata: Metadata = {
   title: 'Techyogeek Nirvana — Where Tech Minds Connect, Create & Grow',
@@ -55,6 +56,7 @@ export default function RootLayout({
           <AuthProvider>
             <RouteGuard>
               <Navbar />
+              <BreadcrumbBar />
               <main style={{ minHeight: 'calc(100vh - 68px)' }}>
                 {children}
               </main>
