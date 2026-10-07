@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Calendar, 
   MapPin, 
@@ -23,7 +24,22 @@ import { soundEffects } from '@/lib/audio/soundEffects';
 import { api } from '@/lib/client/api';
 import { AdminEditModal } from '@/components/admin/AdminEditModal';
 
-export default function EventsPage() {
+const CATEGORIES = [
+  'All',
+  'Hackathons',
+  'Workshops',
+  'Coding Competitions',
+  'Webinars',
+  'Tech Talks',
+  'AI Events',
+  'Career Events',
+  'College Events',
+  'Conferences',
+];
+
+function EventsContent() {
+  const searchParams = useSearchParams();
+  const urlCategory = searchParams.get('category');
   const { currentUser, isAdmin } = useAuth();
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -32,8 +48,26 @@ export default function EventsPage() {
   const [selectedEventModal, setSelectedEventModal] = useState<CommunityEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
 
+  // Sync category if passed via URL query parameter (e.g. /events?category=Hackathons)
+  useEffect(() => {
+    if (urlCategory) {
+      const uCat = urlCategory.toLowerCase().trim();
+      const match = CATEGORIES.find(c => {
+        const cLower = c.toLowerCase().trim();
+        return cLower === uCat || 
+               cLower.startsWith(uCat.slice(0, 4)) || 
+               uCat.startsWith(cLower.slice(0, 4));
+      });
+      if (match) {
+        setSelectedCategory(match);
+      } else {
+        setSelectedCategory(urlCategory);
+      }
+    }
+  }, [urlCategory]);
+
   const loadData = async () => {
-    const evts = dbStore.getEvents(isAdmin, currentUser?.id);
+    const evts = dbStore.getEvents();
     setEvents(evts);
 
     if (currentUser) {
@@ -42,10 +76,10 @@ export default function EventsPage() {
     }
 
     try {
-      const res = await api.events.list({ limit: 100, userId: currentUser?.id });
+      const res = await api.events.list({ limit: 100 });
       if (res.data) {
         dbStore.setEvents(res.data);
-        const currentEvents = dbStore.getEvents(isAdmin, currentUser?.id);
+        const currentEvents = dbStore.getEvents();
         setEvents(currentEvents);
       }
     } catch (_) {}
@@ -99,15 +133,7 @@ export default function EventsPage() {
     }
   };
 
-  const categories = [
-    'All',
-    'Hackathons',
-    'Workshops',
-    'Coding Competitions',
-    'Webinars',
-    'AI Events',
-    'Conferences',
-  ];
+  const categories = CATEGORIES;
 
   const handleRegister = (eventId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,17 +146,37 @@ export default function EventsPage() {
     } else {
       setRegisteredIds(prev => prev.filter(id => id !== eventId));
     }
-    setEvents([...dbStore.getEvents(isAdmin, currentUser?.id)]);
+    setEvents([...dbStore.getEvents()]);
   };
 
   const filtered = events.filter(evt => {
-    if (selectedCategory !== 'All' && evt.category !== selectedCategory) return false;
+    if (selectedCategory !== 'All') {
+      const sel = selectedCategory.toLowerCase().trim();
+      const cat = (evt.category || '').toLowerCase().trim();
+
+      const normSel = sel.replace(/s\b/g, '').replace(/[^a-z0-9]/g, '');
+      const normCat = cat.replace(/s\b/g, '').replace(/[^a-z0-9]/g, '');
+
+      const matches = 
+        cat === sel || 
+        normCat === normSel ||
+        (normCat.length >= 3 && normSel.includes(normCat)) ||
+        (normSel.length >= 3 && normCat.includes(normSel)) ||
+        cat.startsWith(sel.slice(0, 4)) ||
+        sel.startsWith(cat.slice(0, 4));
+
+      if (!matches) {
+        return false;
+      }
+    }
     if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = evt.title.toLowerCase().includes(q);
-      const matchOrganizer = evt.organizer.toLowerCase().includes(q);
-      const matchSkill = evt.skills.some(s => s.toLowerCase().includes(q));
-      if (!matchTitle && !matchOrganizer && !matchSkill) return false;
+      const q = searchQuery.toLowerCase().trim();
+      const matchTitle = evt.title?.toLowerCase().includes(q);
+      const matchOrganizer = evt.organizer?.toLowerCase().includes(q);
+      const matchSkill = (evt.skills || []).some(s => s.toLowerCase().includes(q));
+      const matchDesc = evt.description?.toLowerCase().includes(q);
+      const matchLoc = evt.location?.toLowerCase().includes(q);
+      if (!matchTitle && !matchOrganizer && !matchSkill && !matchDesc && !matchLoc) return false;
     }
     return true;
   });
@@ -235,17 +281,50 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {/* Events Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
-          gap: '28px',
-        }}
-      >
-        {filtered.map(evt => {
-          const isRegistered = registeredIds.includes(evt.id);
-          return (
+      {/* Events Grid / Empty State */}
+      {filtered.length === 0 ? (
+        <div className="glass-card text-center py-20 px-6 rounded-2xl space-y-4 my-8 border border-white/10">
+          <Calendar size={44} className="mx-auto text-[var(--accent-amber)] opacity-70" />
+          <h3 className="text-xl sm:text-2xl font-bold font-display text-[var(--text-primary)]">
+            No {selectedCategory === 'All' ? '' : selectedCategory} Events Found
+          </h3>
+          <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto leading-relaxed">
+            {searchQuery
+              ? `No events match "${searchQuery}". Try a different search keyword or view all categories.`
+              : `There are currently no events listed under "${selectedCategory}". Be the first to host or submit one to the community!`}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+            {selectedCategory !== 'All' && (
+              <button
+                onClick={() => {
+                  soundEffects.playClick();
+                  setSelectedCategory('All');
+                }}
+                className="btn btn-outline text-xs py-2 px-4"
+              >
+                View All Categories
+              </button>
+            )}
+            <a
+              href="/events/submit"
+              onClick={() => soundEffects.playClick()}
+              className="btn btn-primary text-xs py-2 px-5 no-underline inline-flex items-center gap-1.5"
+            >
+              <PlusCircle size={15} /> Host / Submit Event
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gap: '28px',
+          }}
+        >
+          {filtered.map(evt => {
+            const isRegistered = registeredIds.includes(evt.id);
+            return (
             <div
               key={evt.id}
               onClick={() => {
@@ -485,7 +564,8 @@ export default function EventsPage() {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Event Details Modal */}
       {selectedEventModal && (
@@ -687,3 +767,16 @@ export default function EventsPage() {
     </div>
   );
 }
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container-custom flex items-center justify-center min-h-[50vh] text-neutral-400">
+        Loading events...
+      </div>
+    }>
+      <EventsContent />
+    </Suspense>
+  );
+}
+
