@@ -6,7 +6,6 @@ import { useAuth, isGlobalAdminEmail } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles, ShieldCheck, Zap } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import tygn_logo from '@/assets/tygn-logo.png';
 import GlobeCanvas from '@/components/visuals/GlobeCanvas';
 
 // Next.js router adapter for useNavigate
@@ -61,7 +60,7 @@ const Auth = () => {
     );
   }
 
-  const logoSrc = typeof tygn_logo === 'string' ? tygn_logo : (tygn_logo as any)?.src || '/assets/tygn-logo.png';
+  const logoSrc = '/assets/tygn-logo.png';
 
   return (
     <div className="premium-shell relative flex min-h-screen items-center justify-center overflow-hidden p-4 text-slate-100">

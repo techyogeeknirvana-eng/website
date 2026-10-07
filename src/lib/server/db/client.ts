@@ -51,31 +51,31 @@ export function getPostgresClient(): postgres.Sql | null {
 function getSqliteClient(): any {
   if (sqliteClient) return sqliteClient;
 
+  const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  let dbPath: string;
+
+  if (isServerless) {
+    const tmpDbPath = path.join('/tmp', 'tygn_production.db');
+    const sourceDbPath = path.join(process.cwd(), 'data', 'tygn_production.db');
+    if (!fs.existsSync(tmpDbPath) && fs.existsSync(sourceDbPath)) {
+      try { fs.copyFileSync(sourceDbPath, tmpDbPath); } catch (_) {}
+    }
+    dbPath = tmpDbPath;
+  } else {
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    dbPath = process.env.DATABASE_FILE || path.join(dataDir, 'tygn_production.db');
+  }
+
+  // 1. Try better-sqlite3
   try {
     const Database = require('better-sqlite3');
-    const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
-    let dbPath: string;
-
-    if (isServerless) {
-      const tmpDbPath = path.join('/tmp', 'tygn_production.db');
-      const sourceDbPath = path.join(process.cwd(), 'data', 'tygn_production.db');
-      if (!fs.existsSync(tmpDbPath) && fs.existsSync(sourceDbPath)) {
-        try { fs.copyFileSync(sourceDbPath, tmpDbPath); } catch (_) {}
-      }
-      dbPath = tmpDbPath;
-    } else {
-      const dataDir = path.join(process.cwd(), 'data');
-      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-      dbPath = process.env.DATABASE_FILE || path.join(dataDir, 'tygn_production.db');
-    }
-
     sqliteClient = new Database(dbPath);
     try {
       sqliteClient.pragma(isServerless ? 'journal_mode = DELETE' : 'journal_mode = WAL');
       sqliteClient.pragma('foreign_keys = ON');
     } catch (_) {}
 
-    // Auto-create all 25 relational tables synchronously so 'no such table: users' is impossible
     try {
       const { SCHEMA_SQL } = require('./schema');
       sqliteClient.exec(SCHEMA_SQL);
@@ -84,9 +84,28 @@ function getSqliteClient(): any {
     }
 
     return sqliteClient;
-  } catch (err) {
-    console.warn('SQLite fallback unavailable in this environment:', err);
-    return null;
+  } catch (betterSqliteErr) {
+    // 2. Fallback to Node.js built-in node:sqlite
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      sqliteClient = new DatabaseSync(dbPath);
+      try {
+        sqliteClient.exec(isServerless ? 'PRAGMA journal_mode = DELETE;' : 'PRAGMA journal_mode = WAL;');
+        sqliteClient.exec('PRAGMA foreign_keys = ON;');
+      } catch (_) {}
+
+      try {
+        const { SCHEMA_SQL } = require('./schema');
+        sqliteClient.exec(SCHEMA_SQL);
+      } catch (schemaErr) {
+        console.warn('Failed to auto-execute SQLite schema with node:sqlite:', schemaErr);
+      }
+
+      return sqliteClient;
+    } catch (nodeSqliteErr) {
+      console.warn('SQLite fallback unavailable in this environment:', betterSqliteErr, nodeSqliteErr);
+      return null;
+    }
   }
 }
 

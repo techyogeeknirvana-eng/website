@@ -386,13 +386,13 @@ class DataStore {
       }
 
       // Sync active user wallet & token transactions
-      const activeUserId = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_id') : null;
-      if (activeUserId) {
-        fetch(`/api/credits?userId=${encodeURIComponent(activeUserId)}`)
+      const targetUserId = activeUserId || (typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_id') : null);
+      if (targetUserId) {
+        fetch(`/api/credits?userId=${encodeURIComponent(targetUserId)}`)
           .then(r => r.ok ? r.json() : null)
           .then(json => {
             if (json?.data?.wallet) {
-              this.wallets[activeUserId] = json.data.wallet;
+              this.wallets[targetUserId] = json.data.wallet;
               this.save(STORAGE_KEYS.WALLETS, this.wallets);
             }
             if (json?.data?.transactions) {
