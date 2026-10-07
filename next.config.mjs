@@ -43,6 +43,19 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      { source: '/drive', destination: '/notes', permanent: false },
+      { source: '/jobs', destination: '/opportunities', permanent: false },
+      { source: '/channels', destination: '/community', permanent: false },
+      { source: '/collab', destination: '/collab-finder', permanent: false },
+      { source: '/competitions', destination: '/events', permanent: false },
+      { source: '/resume', destination: '/resume-lab', permanent: false },
+      { source: '/interview', destination: '/ai-interview', permanent: false },
+      { source: '/code-explainer', destination: '/ai-code', permanent: false },
+      { source: '/settings', destination: '/profile', permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

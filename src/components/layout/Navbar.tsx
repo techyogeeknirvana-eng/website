@@ -67,20 +67,32 @@ export function Navbar() {
     router.replace('/');
   };
 
-  // Dual-state navigation links
+  const isLinkActive = (href: string) => {
+    if (href === '/') {
+      return pathname === '/';
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
+
+  // Full platform links for public and authenticated experiences
   const publicNavLinks = [
+    { label: 'Home', href: '/' },
     { label: 'About', href: '/about' },
-    { label: 'How It Works', href: '/#story' },
+    { label: 'Events', href: '/events' },
+    { label: 'Growth Hub', href: '/growth' },
+    { label: 'Games Arena', href: '/games' },
+    { label: 'Opportunities', href: '/opportunities' },
   ];
 
   const authenticatedNavLinks = [
     { label: 'Home', href: '/' },
     { label: 'Dashboard', href: '/dashboard' },
+    { label: 'About', href: '/about' },
     { label: 'Notes', href: '/notes' },
     { label: 'Events', href: '/events' },
-    { label: 'Opportunities', href: '/opportunities' },
     { label: 'Growth Hub', href: '/growth' },
     { label: 'Games Arena', href: '/games' },
+    { label: 'Opportunities', href: '/opportunities' },
   ];
 
   const navLinks = (isAuthenticated && currentUser) ? authenticatedNavLinks : publicNavLinks;
@@ -139,43 +151,35 @@ export function Navbar() {
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href;
+              const isActive = isLinkActive(link.href);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => soundEffects.playClick()}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all no-underline ${
+                  className={`px-3 py-1.5 rounded-full text-xs transition-all no-underline ${
                     isActive
                       ? isDark
-                        ? 'bg-white text-black font-bold shadow-sm'
-                        : 'bg-black text-white font-bold shadow-sm'
+                        ? 'bg-white text-black font-extrabold shadow-[0_0_18px_rgba(255,255,255,0.4)] ring-2 ring-white scale-[1.03]'
+                        : 'bg-black text-white font-extrabold shadow-[0_0_18px_rgba(0,0,0,0.3)] ring-2 ring-black scale-[1.03]'
                       : isDark
-                      ? 'text-[#d4d4d4] hover:text-white hover:bg-white/5'
-                      : 'text-[#404040] hover:text-black hover:bg-black/5'
+                      ? 'text-[#d4d4d4] hover:text-white hover:bg-white/10 font-semibold'
+                      : 'text-[#404040] hover:text-black hover:bg-black/10 font-semibold'
                   }`}
                 >
-                  {link.label}
+                  <span className="flex items-center gap-1.5">
+                    {isActive && (
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          isDark ? 'bg-black' : 'bg-white'
+                        }`}
+                      />
+                    )}
+                    <span>{link.label}</span>
+                  </span>
                 </Link>
               );
             })}
-
-            {/* Public Features Drawer Trigger (Only shown before sign-in) */}
-            {!isAuthenticated && (
-              <button
-                onClick={() => {
-                  soundEffects.playClick();
-                  setIsFeaturesModalOpen(true);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isDark
-                    ? 'text-[#d4d4d4] hover:text-white hover:bg-white/5'
-                    : 'text-[#404040] hover:text-black hover:bg-black/5'
-                }`}
-              >
-                Features
-              </button>
-            )}
           </nav>
 
           {/* Right Controls */}
@@ -411,28 +415,28 @@ export function Navbar() {
             </div>
 
             <div className="flex flex-col space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-display font-bold text-xl py-2 text-white no-underline hover:opacity-70 transition-opacity"
-                >
-                  {link.label}
-                </Link>
-              ))}
-
-              {!isAuthenticated && (
-                <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setIsFeaturesModalOpen(true);
-                  }}
-                  className="font-display font-bold text-xl py-2 text-white text-left hover:opacity-70 transition-opacity"
-                >
-                  Features
-                </button>
-              )}
+              {navLinks.map((link) => {
+                const isActive = isLinkActive(link.href);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`font-display font-bold text-lg py-3 px-4 rounded-xl flex items-center justify-between no-underline transition-all ${
+                      isActive
+                        ? 'bg-white text-black shadow-lg ring-2 ring-white'
+                        : 'text-neutral-300 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {isActive && (
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black text-white">
+                        ACTIVE
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 

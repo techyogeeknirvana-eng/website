@@ -48,12 +48,28 @@ function RouteGuardContent({ children }: { children: React.ReactNode }) {
       router.replace('/community');
       return;
     }
-    if (pathname === '/settings') {
-      router.replace('/profile');
+    if (pathname === '/collab') {
+      router.replace('/collab-finder');
       return;
     }
-    if (pathname === '/ai') {
+    if (pathname === '/competitions') {
+      router.replace('/events');
+      return;
+    }
+    if (pathname === '/resume') {
+      router.replace('/resume-lab');
+      return;
+    }
+    if (pathname === '/interview') {
+      router.replace('/ai-interview');
+      return;
+    }
+    if (pathname === '/code-explainer' || pathname === '/ai') {
       router.replace('/ai-code');
+      return;
+    }
+    if (pathname === '/settings') {
+      router.replace('/profile');
       return;
     }
   }, [pathname, router]);
