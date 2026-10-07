@@ -4,16 +4,13 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   Sparkles, 
-  TrendingUp, 
-  MessageSquare, 
+  ArrowRight, 
   Flame, 
   Award, 
-  Compass, 
-  Gamepad2, 
-  BookOpen, 
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2
+  Check, 
+  Sliders,
+  MessageSquare,
+  Bot
 } from 'lucide-react';
 import { VerbalMannersQuiz } from '@/components/growth/VerbalMannersQuiz';
 import { DailyChallenge } from '@/components/growth/DailyChallenge';
@@ -21,188 +18,165 @@ import { CommunicationCoach } from '@/components/growth/CommunicationCoach';
 import { CommunicationPractice } from '@/components/growth/CommunicationPractice';
 import { ConversationSimulator } from '@/components/growth/ConversationSimulator';
 import { SkillRadar } from '@/components/growth/SkillRadar';
-import { GROWTH_RESOURCES } from '@/data/growthResources';
+import { growthProgressStore } from '@/lib/growth/progressStore';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 export default function GrowthHubPage() {
-  const [activeTab, setActiveTab] = useState<'quiz' | 'coach' | 'practice' | 'simulator' | 'resources'>('quiz');
+  const { isDark } = useThemeCustomizer();
+  const [activeTab, setActiveTab] = useState<'quiz' | 'coach' | 'practice' | 'simulator' | 'daily'>('quiz');
+  const [progress] = useState(growthProgressStore.getProgress());
+
+  const progressMetrics = [
+    { label: 'Communication', value: 72 },
+    { label: 'Confidence', value: 64 },
+    { label: 'Professional Etiquette', value: 81 },
+    { label: 'Critical Thinking', value: 76 },
+    { label: 'Leadership', value: 58 },
+    { label: 'Presentation', value: 69 },
+  ];
+
+  const handleStartDiagnostic = () => {
+    soundEffects.playClick();
+    setActiveTab('quiz');
+    const el = document.getElementById('workspace');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleViewProgress = () => {
+    soundEffects.playClick();
+    const el = document.getElementById('progress-dashboard');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
-    <div className="min-h-screen py-10 px-4 max-w-6xl mx-auto space-y-12">
-      {/* Top Hero Banner */}
-      <div 
-        className="glass-card rounded-3xl p-8 sm:p-14 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl text-center"
-        style={{
-          background: 'radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15), transparent 70%), linear-gradient(180deg, rgba(13, 18, 29, 0.9) 0%, rgba(5, 8, 14, 0.98) 100%)'
-        }}
-      >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-4">
-          <TrendingUp size={14} /> Personal Growth Platform
+    <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-16 sm:space-y-24">
+      {/* 1. GROWTH HUB HERO */}
+      <section className="text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 dark:border-white/10 light:border-black/10 text-xs font-semibold uppercase tracking-widest text-[#737373]">
+          <Sparkles size={13} />
+          <span>PERSONAL GROWTH PLATFORM // TYGN GROWTH HUB</span>
         </div>
-        <h1 className="text-3xl sm:text-6xl font-black text-white font-display tracking-tight mb-4">
-          TYGN Growth Hub
-        </h1>
-        <p className="text-slate-300/80 text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed mb-8">
-          Technical mastery needs verbal etiquette, confidence, and leadership communication. Train with adaptive diagnostics, real-time phrase analysis, and conversation simulations.
-        </p>
 
-        {/* Quick Tabs Navigation */}
-        <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 w-fit mx-auto">
+        <div className="space-y-3">
+          <h1 className="editorial-title text-4xl sm:text-6xl md:text-7xl text-inherit">
+            Become Better At More Than Code.
+          </h1>
+          <p className="text-sm sm:text-lg text-[#737373] dark:text-[#a3a3a3] light:text-[#525252] max-w-2xl mx-auto leading-relaxed">
+            Practice communication, verbal manners, confidence, leadership and professional behaviour through adaptive challenges.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2">
           <button
-            onClick={() => {
-              soundEffects.playClick();
-              setActiveTab('quiz');
-            }}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTab === 'quiz'
-                ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 text-white shadow-lg shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
+            onClick={handleStartDiagnostic}
+            className="btn btn-primary text-sm sm:text-base py-3 sm:py-3.5 px-8 font-bold w-full sm:w-auto"
           >
-            10-Q Etiquette Diagnostic
+            Start Diagnostic
           </button>
-
           <button
-            onClick={() => {
-              soundEffects.playClick();
-              setActiveTab('coach');
-            }}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTab === 'coach'
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
-            }`}
+            onClick={handleViewProgress}
+            className="btn btn-secondary text-sm sm:text-base py-3 sm:py-3.5 px-8 font-semibold w-full sm:w-auto"
           >
-            Communication Coach
-          </button>
-
-          <button
-            onClick={() => {
-              soundEffects.playClick();
-              setActiveTab('practice');
-            }}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTab === 'practice'
-                ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Practice Scenarios
-          </button>
-
-          <button
-            onClick={() => {
-              soundEffects.playClick();
-              setActiveTab('simulator');
-            }}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTab === 'simulator'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Conversation Simulator
-          </button>
-
-          <button
-            onClick={() => {
-              soundEffects.playClick();
-              setActiveTab('resources');
-            }}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-              activeTab === 'resources'
-                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Resource Library
+            View My Progress
           </button>
         </div>
-      </div>
+      </section>
 
-      {/* Main Tab Content */}
-      <div>
-        {activeTab === 'quiz' && (
-          <div className="animate-fadeIn">
-            <VerbalMannersQuiz />
-          </div>
-        )}
-
-        {activeTab === 'coach' && (
-          <div className="animate-fadeIn">
-            <CommunicationCoach />
-          </div>
-        )}
-
-        {activeTab === 'practice' && (
-          <div className="animate-fadeIn">
-            <CommunicationPractice />
-          </div>
-        )}
-
-        {activeTab === 'simulator' && (
-          <div className="animate-fadeIn">
-            <ConversationSimulator />
-          </div>
-        )}
-
-        {activeTab === 'resources' && (
-          <div className="animate-fadeIn space-y-6">
-            <div className="text-center max-w-xl mx-auto mb-8">
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 block mb-1">
-                Executive Blueprints
-              </span>
-              <h3 className="text-2xl font-bold text-white font-display">
-                Communication Learning Library
-              </h3>
+      {/* 2. PERSONAL GROWTH DASHBOARD (Item 13) */}
+      <section id="progress-dashboard" className="mono-card p-6 sm:p-12 space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
+          <div>
+            <div className="editorial-eyebrow">
+              COMPETENCY DASHBOARD // VERIFIED PROFILE
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {GROWTH_RESOURCES.map(res => (
-                <div key={res.id} className="glass-card p-6 rounded-3xl border border-white/10 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                      <span className="font-semibold text-cyan-400 uppercase tracking-wider">
-                        {res.skill.replace(/-/g, ' ')}
-                      </span>
-                      <span>{res.readTime}</span>
-                    </div>
-                    <h4 className="text-lg font-bold text-white mb-2">{res.title}</h4>
-                    <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                      {res.description}
-                    </p>
-
-                    <div className="space-y-1.5 mb-4">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                        Key Executive Phrasings:
-                      </span>
-                      {res.keyPhrases.map((phrase, i) => (
-                        <div key={i} className="text-xs text-cyan-200 italic p-2 rounded-xl bg-white/[0.02] border border-white/5">
-                          {phrase}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-white/10 text-xs text-slate-400 italic">
-                    Practice Prompt: {res.practicePrompt}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="editorial-title text-2xl sm:text-4xl text-inherit mt-1">
+              Your Progress
+            </h2>
           </div>
-        )}
-      </div>
 
-      {/* Persistent Daily Challenge & Skill Radar Strip */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-6 border-t border-white/10">
-        <div className="lg:col-span-7">
-          <DailyChallenge />
+          <div className="flex items-center gap-3">
+            <span className="mono-badge text-xs py-1 px-3">
+              🔥 {progress.currentStreak} Day Streak
+            </span>
+            <span className="mono-badge text-xs py-1 px-3">
+              Level {progress.levelNumber}: {progress.levelName}
+            </span>
+          </div>
         </div>
-        <div className="lg:col-span-5 flex flex-col justify-center">
-          <SkillRadar />
+
+        {/* 6 Monochrome Progress Cards (Communication 72%, Confidence 64%, etc.) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {progressMetrics.map((metric, idx) => (
+            <div
+              key={idx}
+              className="p-5 rounded-2xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02] space-y-3"
+            >
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-[#737373] uppercase font-bold">{metric.label}</span>
+                <span className="font-display font-black text-lg text-inherit">{metric.value}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 dark:bg-white/10 light:bg-black/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-current transition-all duration-500"
+                  style={{ width: `${metric.value}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* 3. TODAY'S CHALLENGE STRIP (Item 22) */}
+      <section>
+        <DailyChallenge />
+      </section>
+
+      {/* 4. INTERACTIVE WORKSPACE TABS */}
+      <section id="workspace" className="space-y-8">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-2xl bg-white/[0.04] dark:bg-white/[0.04] light:bg-black/[0.03] border border-white/10 dark:border-white/10 light:border-black/10 w-fit mx-auto">
+          {[
+            { id: 'quiz', label: '10-Q Diagnostic' },
+            { id: 'coach', label: 'Phrase Coach' },
+            { id: 'practice', label: 'Practice Scenarios' },
+            { id: 'simulator', label: 'Conversation Simulator' },
+            { id: 'radar', label: 'Competency Radar' },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  soundEffects.playClick();
+                  setActiveTab(tab.id as any);
+                }}
+                className={`py-2 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                  isSelected
+                    ? isDark
+                      ? 'bg-white text-black font-bold shadow-md'
+                      : 'bg-black text-white font-bold shadow-md'
+                    : 'text-[#737373] hover:text-white dark:hover:text-white light:hover:text-black'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tab Views */}
+        <div>
+          {activeTab === 'quiz' && <VerbalMannersQuiz />}
+          {activeTab === 'coach' && <CommunicationCoach />}
+          {activeTab === 'practice' && <CommunicationPractice />}
+          {activeTab === 'simulator' && <ConversationSimulator />}
+          {activeTab === (('radar' as any)) && (
+            <div className="flex justify-center">
+              <SkillRadar />
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

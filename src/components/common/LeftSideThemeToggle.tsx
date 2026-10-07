@@ -1,25 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Sun, Moon, Sparkles } from 'lucide-react';
+import React from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 export function LeftSideThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+  const { isDark, toggleTheme } = useThemeCustomizer();
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('tygn_theme') || 'light';
-    const isDarkMode = savedTheme === 'dark';
-    setIsDark(isDarkMode);
-    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
-  }, []);
-
-  const toggleTheme = () => {
+  const handleToggle = () => {
     soundEffects.playClick();
-    const newTheme = isDark ? 'light' : 'dark';
-    setIsDark(!isDark);
-    localStorage.setItem('tygn_theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    toggleTheme();
   };
 
   return (
@@ -31,25 +22,16 @@ export function LeftSideThemeToggle() {
         zIndex: 998,
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
       }}
     >
       <button
-        onClick={toggleTheme}
-        className="glass-card glow-border"
-        title={isDark ? 'Switch to White Theme' : 'Switch to Black Theme'}
+        onClick={handleToggle}
+        title={isDark ? 'Switch to Clean White Theme' : 'Switch to Cinematic Black Theme'}
+        className="mono-card flex items-center gap-2.5 px-4 py-2 rounded-full border shadow-lg transition-all"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '10px 16px',
-          borderRadius: 'var(--radius-full)',
-          background: isDark ? 'rgba(13, 18, 29, 0.92)' : 'rgba(255, 255, 255, 0.95)',
-          border: '1px solid var(--border-glow)',
-          boxShadow: isDark ? '0 0 20px rgba(99, 102, 241, 0.35)' : '0 4px 16px rgba(0, 0, 0, 0.1)',
-          cursor: 'pointer',
-          color: isDark ? '#ffffff' : '#0f172a',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: isDark ? 'rgba(10, 10, 10, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+          color: isDark ? '#ffffff' : '#000000',
         }}
       >
         <div
@@ -62,13 +44,13 @@ export function LeftSideThemeToggle() {
           }}
         >
           {isDark ? (
-            <Moon size={17} style={{ color: 'var(--accent-indigo)' }} />
+            <Moon size={15} className="text-white" />
           ) : (
-            <Sun size={17} style={{ color: 'var(--accent-amber)' }} />
+            <Sun size={15} className="text-black" />
           )}
         </div>
 
-        <span style={{ fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+        <span style={{ fontSize: '0.76rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {isDark ? 'BLACK' : 'WHITE'}
         </span>
       </button>

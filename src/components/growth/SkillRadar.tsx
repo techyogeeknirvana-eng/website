@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { growthProgressStore } from '@/lib/growth/progressStore';
 import { UserGrowthProgress } from '@/types/growth';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 export function SkillRadar() {
+  const { isDark } = useThemeCustomizer();
   const [progress, setProgress] = useState<UserGrowthProgress>(growthProgressStore.getProgress());
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export function SkillRadar() {
 
   const size = 320;
   const center = size / 2;
-  const radius = 110;
+  const radius = 100;
   const total = stats.length;
 
   const getCoordinates = (index: number, valPercent: number) => {
@@ -41,37 +43,36 @@ export function SkillRadar() {
     return `${x},${y}`;
   }).join(' ');
 
-  // Grid concentric rings (25%, 50%, 75%, 100%)
   const gridRings = [25, 50, 75, 100];
 
   return (
-    <div className="glass-card rounded-3xl p-6 border border-white/10 shadow-xl flex flex-col items-center">
-      <div className="flex items-center justify-between w-full mb-3">
-        <h4 className="font-bold text-sm text-white">TYGN Skill Radar</h4>
-        <span className="text-[11px] font-mono text-cyan-400">Adaptive Matrix</span>
+    <div className="mono-card p-6 w-full max-w-sm flex flex-col items-center">
+      <div className="flex items-center justify-between w-full mb-3 text-inherit">
+        <h4 className="font-display font-bold text-sm">Competency Matrix</h4>
+        <span className="text-[10px] font-mono uppercase text-[#737373]">Verified Radar</span>
       </div>
 
-      <div className="relative w-full max-w-[320px] aspect-square flex items-center justify-center">
+      <div className="relative w-full aspect-square flex items-center justify-center">
         <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full overflow-visible">
-          {/* Concentric Grid Polygons */}
+          {/* Concentric Rings */}
           {gridRings.map(pct => {
             const ringPoints = stats.map((_, i) => {
               const { x, y } = getCoordinates(i, pct);
               return `${x},${y}`;
             }).join(' ');
-
             return (
               <polygon
                 key={pct}
                 points={ringPoints}
                 fill="none"
-                stroke="rgba(255, 255, 255, 0.08)"
+                stroke={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
                 strokeWidth="1"
+                strokeDasharray={pct === 100 ? undefined : '2,2'}
               />
             );
           })}
 
-          {/* Radial Axis Lines */}
+          {/* Spokes */}
           {stats.map((_, i) => {
             const { x, y } = getCoordinates(i, 100);
             return (
@@ -81,64 +82,50 @@ export function SkillRadar() {
                 y1={center}
                 x2={x}
                 y2={y}
-                stroke="rgba(255, 255, 255, 0.08)"
+                stroke={isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}
                 strokeWidth="1"
               />
             );
           })}
 
-          {/* Data Polygon */}
+          {/* User Score Polygon (Strict Monochrome Fill & Stroke) */}
           <polygon
             points={points}
-            fill="rgba(0, 229, 255, 0.22)"
-            stroke="#00e5ff"
-            strokeWidth="2.5"
-            style={{
-              filter: 'drop-shadow(0 0 10px rgba(0, 229, 255, 0.4))'
-            }}
+            fill={isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'}
+            stroke={isDark ? '#ffffff' : '#000000'}
+            strokeWidth="2"
+            strokeLinejoin="round"
           />
 
-          {/* Data Points */}
+          {/* Vertex Dots & Value Labels */}
           {stats.map((s, i) => {
             const { x, y } = getCoordinates(i, s.value);
+            const outerCoord = getCoordinates(i, 118);
             return (
-              <circle
-                key={i}
-                cx={x}
-                cy={y}
-                r="4.5"
-                fill="#6366f1"
-                stroke="#ffffff"
-                strokeWidth="1.5"
-              />
-            );
-          })}
-
-          {/* Outer Labels */}
-          {stats.map((s, i) => {
-            const { x, y } = getCoordinates(i, 122);
-            return (
-              <text
-                key={i}
-                x={x}
-                y={y}
-                fill="#94a3b8"
-                fontSize="9"
-                fontWeight="600"
-                textAnchor="middle"
-                dominantBaseline="central"
-                className="select-none font-sans"
-              >
-                {s.label} ({s.value})
-              </text>
+              <g key={i}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="3.5"
+                  fill={isDark ? '#ffffff' : '#000000'}
+                />
+                <text
+                  x={outerCoord.x}
+                  y={outerCoord.y}
+                  fontSize="9.5"
+                  fontWeight="600"
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={isDark ? '#a3a3a3' : '#525252'}
+                  fontFamily="var(--font-sans)"
+                >
+                  {s.label}
+                </text>
+              </g>
             );
           })}
         </svg>
       </div>
-
-      <p className="text-[11px] text-slate-400 mt-4 text-center">
-        Scores dynamically calibrate as you complete quizzes, daily challenges, and games.
-      </p>
     </div>
   );
 }

@@ -1,849 +1,375 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Sparkles, 
   Search, 
-  Shield, 
   X, 
-  Radio, 
-  Briefcase, 
-  Calendar, 
-  Users, 
-  Compass, 
-  FileText, 
+  Menu, 
+  Sliders, 
+  Sun, 
+  Moon, 
+  CheckCircle2, 
+  Shield, 
+  LogOut, 
   UserCheck, 
-  ChevronDown, 
   LayoutDashboard,
-  Layers,
-  Code,
   BookOpen,
-  FolderGit2,
-  CheckCircle2,
-  ExternalLink,
-  LogOut,
-  Sliders,
-  MessageSquare,
-  Palette,
-  Gamepad2,
-  Award
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
-import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
+import { soundEffects } from '@/lib/audio/soundEffects';
 import { SoundToggle } from '@/components/common/SoundToggle';
 import { GoogleIcon } from '@/components/auth/GoogleAuthModal';
-import { soundEffects } from '@/lib/audio/soundEffects';
-import { CreditChip } from '@/components/credits/CreditChip';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { currentUser, isAuthenticated, isAdmin, isGoogleLoggedIn, openGoogleModal, openGoogleChooser, signInWithGoogle, logout } = useAuth();
-  const { setIsCustomizerOpen } = useThemeCustomizer();
-  const [allFunctionsOpen, setAllFunctionsOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { currentUser, isAuthenticated, isAdmin, openGoogleModal, signInWithGoogle, logout } = useAuth();
+  const { isDark, toggleTheme, setIsCustomizerOpen } = useThemeCustomizer();
+  
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   useEffect(() => {
-    setAllFunctionsOpen(false);
-    setUserMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setAllFunctionsOpen(false);
-        setUserMenuOpen(false);
-      }
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setUserDropdownOpen(false);
+  }, [pathname]);
 
   const handleOpenSearch = () => {
     soundEffects.playClick();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   };
 
-  const featureDirectory = [
-    {
-      category: 'Growth Hub & Etiquette Arena',
-      color: '#10b981',
-      items: [
-        { label: 'Growth Hub & Manners Coach', desc: 'Communication coaching, etiquette diagnostic & adaptive practice', href: '/growth', icon: <Sparkles size={16} />, badge: 'Flagship' },
-        { label: 'TYGN Games Arena', desc: 'Tone challenges, Say It Better, etiquette dilemmas & vocab precision', href: '/games', icon: <Gamepad2 size={16} />, badge: 'Play & Learn' },
-        { label: '10-Q Etiquette Diagnostic', desc: 'Official 10-question evaluation with personalized weakness insights', href: '/growth#quiz', icon: <CheckCircle2 size={16} />, badge: '10 Questions' },
-        { label: 'Daily Growth Challenge', desc: 'Complete daily communication micro-challenges & maintain streak', href: '/growth#daily', icon: <Award size={16} />, badge: '+50 XP' },
-      ]
-    },
-    {
-      category: 'Community & Connections',
-      color: '#06b6d4',
-      items: [
-        { label: 'About TYGN (Our Story)', desc: 'Founded 2023, student mission, pillars & founders', href: '/about', icon: <Compass size={16} />, badge: 'Story' },
-        { label: 'Community Hub & Channels', desc: 'Discord-like channels, role tags & real-time chat', href: '/community', icon: <MessageSquare size={16} /> },
-        { label: 'Collab Finder', desc: 'Find hackathon teammates & project co-builders', href: '/collab-finder', icon: <Users size={16} /> },
-        { label: 'Community Moments', desc: 'Stories, code snippets & project wins feed', href: '/moments', icon: <Sparkles size={16} /> },
-      ]
-    },
-    {
-      category: 'Academic & Knowledge Hub',
-      color: '#3b82f6',
-      items: [
-        { label: 'B.Tech Notes Drive', desc: 'Direct Google Drive academic repository & curriculum notes', href: '/notes', icon: <BookOpen size={16} />, badge: 'Official Drive' },
-        { label: 'Tech Radar 2025', desc: 'Industry tech stack radar for engineering students', href: '/tech-radar', icon: <Compass size={16} /> },
-        { label: 'Engineering Roadmaps', desc: 'Role-based skill trees (Fullstack, DevOps, AI)', href: '/roadmaps', icon: <Code size={16} /> },
-        { label: 'Open Showcase Projects', desc: 'Student open-source portfolio repository', href: '/projects', icon: <Layers size={16} /> },
-      ]
-    },
-    {
-      category: 'Interactive Live Hub',
-      color: '#ec4899',
-      items: [
-        { label: 'Nirvana Live Room', desc: 'Mentimeter-style live quizzes, leaderboards & polls', href: '/live', icon: <Radio size={16} />, badge: 'Live' },
-        { label: 'Join Session by PIN', desc: 'Enter 6-digit PIN code to join live presentation', href: '/live/join', icon: <Sliders size={16} /> },
-        { label: 'Tech Competitions & Events', desc: 'Workshops, hackathons & community tech summits', href: '/events', icon: <Calendar size={16} /> },
-        { label: 'Internships & Job Board', desc: 'Curated developer jobs, stipends & fast-track hiring', href: '/opportunities', icon: <Briefcase size={16} /> },
-      ]
-    },
-    {
-      category: 'AI Developer Suite',
-      color: '#8b5cf6',
-      items: [
-        { label: 'AI Resume Lab & OCR', desc: 'Upload PDF/Image for ATS scoring and tech feedback', href: '/resume-lab', icon: <FileText size={16} />, badge: 'PDF/Image' },
-        { label: 'AI Mock Interview Room', desc: 'Adaptive voice and code technical screening simulation', href: '/ai-interview', icon: <Code size={16} /> },
-        { label: 'AI Code Explainer', desc: 'Deep-dive complexity analyzer and bug detector', href: '/ai-code', icon: <Sparkles size={16} /> },
-      ]
-    },
+  const navLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'About', href: '/about' },
+    { label: 'Events', href: '/events' },
+    { label: 'Growth Hub', href: '/growth' },
+    { label: 'Games Arena', href: '/games' },
+    { label: 'Opportunities', href: '/opportunities' },
   ];
 
   return (
-    <header
-      className="glass-panel"
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: allFunctionsOpen ? 10000 : 900,
-        borderBottom: '1px solid var(--border-subtle)',
-        background: 'var(--bg-glass)',
-        backdropFilter: 'blur(16px)',
-      }}
-    >
-      <div
-        className="container-custom"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: '70px',
-          gap: '16px',
-        }}
+    <>
+      {/* Floating Capsule Header */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 flex justify-center px-4 ${
+          scrolled ? 'pt-2 sm:pt-3' : 'pt-4 sm:pt-6'
+        }`}
       >
-        {/* Left: Brand Logo & Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <a
+        <div
+          className={`w-full max-w-6xl transition-all duration-300 rounded-full border flex items-center justify-between px-4 sm:px-6 ${
+            scrolled
+              ? 'py-2.5 bg-black/85 dark:bg-black/85 light:bg-white/90 backdrop-blur-2xl border-white/15 dark:border-white/15 light:border-black/10 shadow-2xl'
+              : 'py-3.5 bg-black/60 dark:bg-black/60 light:bg-white/80 backdrop-blur-xl border-white/10 dark:border-white/10 light:border-black/5 shadow-lg'
+          }`}
+          style={{
+            background: isDark ? 'rgba(5, 5, 5, 0.82)' : 'rgba(255, 255, 255, 0.88)',
+            borderColor: isDark ? (scrolled ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)') : (scrolled ? 'rgba(0, 0, 0, 0.14)' : 'rgba(0, 0, 0, 0.06)'),
+            color: isDark ? '#ffffff' : '#000000',
+          }}
+        >
+          {/* Brand Logo & Identifier */}
+          <Link
             href="/"
             onClick={() => soundEffects.playClick()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              textDecoration: 'none',
-            }}
+            className="flex items-center gap-3 text-inherit no-underline shrink-0"
           >
             <div
+              className="w-8 h-8 rounded-full overflow-hidden border flex items-center justify-center shrink-0 transition-transform hover:scale-105"
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '10px',
-                overflow: 'hidden',
-                boxShadow: '0 0 16px rgba(6, 182, 212, 0.35)',
-                border: '1px solid rgba(6, 182, 212, 0.4)',
-                background: '#07090e',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+                background: isDark ? '#000000' : '#ffffff',
               }}
             >
               <img
                 src="/assets/tygn-logo.png"
-                alt="TYGN Official Logo"
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                alt="TYGN"
+                className="w-full h-full object-contain p-0.5 invert dark:invert-0"
               />
             </div>
-              <div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontWeight: 800,
-                    fontSize: '1.18rem',
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+            <div className="flex flex-col">
+              <span className="font-display font-black text-sm sm:text-base tracking-tight leading-none">
+                TYGN
+              </span>
+              <span className="text-[0.62rem] font-bold uppercase tracking-widest text-[#737373] leading-none mt-0.5">
+                NIRVANA
+              </span>
+            </div>
+          </Link>
+
+          {/* Desktop Navigation Links */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => soundEffects.playClick()}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all no-underline ${
+                    isActive
+                      ? isDark
+                        ? 'bg-white text-black font-bold shadow-sm'
+                        : 'bg-black text-white font-bold shadow-sm'
+                      : isDark
+                      ? 'text-[#d4d4d4] hover:text-white hover:bg-white/5'
+                      : 'text-[#404040] hover:text-black hover:bg-black/5'
+                  }`}
                 >
-                  <span style={{ color: 'var(--text-primary)' }}>TYGN</span>
-                  <span className="text-gradient" style={{ fontSize: '0.98rem' }}>NIRVANA</span>
-                </div>
-                <div
-                  style={{
-                    fontSize: '0.66rem',
-                    color: 'var(--accent-amber)',
-                    letterSpacing: '0.04em',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  B.Tech Student Community
-                </div>
-              </div>
-          </a>
-        </div>
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Quick Nav Links for Growth & Games */}
-        <nav
-          className="hide-on-tablet"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginLeft: '6px',
-          }}
-        >
-          <a
-            href="/growth"
-            onClick={() => soundEffects.playClick()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.84rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              color: pathname === '/growth' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-              background: pathname === '/growth' ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Sparkles size={14} style={{ color: 'var(--accent-purple)' }} />
-            <span>Growth Hub</span>
-          </a>
-          <a
-            href="/games"
-            onClick={() => soundEffects.playClick()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-full)',
-              fontSize: '0.84rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              color: pathname === '/games' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-              background: pathname === '/games' ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Gamepad2 size={14} style={{ color: '#10b981' }} />
-            <span>Games</span>
-          </a>
-        </nav>
+          {/* Right Controls */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Command Palette Trigger */}
+            <button
+              onClick={handleOpenSearch}
+              title="Search commands (Cmd+K)"
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs text-[#a3a3a3] hover:text-white transition-colors"
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+              }}
+            >
+              <Search size={13} />
+              <span className="text-[0.7rem] font-mono opacity-60">⌘K</span>
+            </button>
 
-        {/* Center: Enhanced Formatted Search Bar */}
-        <div
-          onClick={handleOpenSearch}
-          style={{
-            flex: '1',
-            maxWidth: '460px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '9px 16px',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--bg-glass-card)',
-            border: '1px solid var(--border-glow)',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          className="navbar-search-bar"
-        >
-          <Search size={16} style={{ color: 'var(--accent-cyan)', flexShrink: 0 }} />
-          <span
-            style={{
-              fontSize: '0.84rem',
-              color: 'var(--text-muted)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flex: 1,
-            }}
-          >
-            Search notes, drive, jobs, quizzes, channels...
-          </span>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              padding: '2px 7px',
-              borderRadius: '6px',
-              background: 'rgba(0, 0, 0, 0.06)',
-              border: '1px solid var(--border-subtle)',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: 'var(--text-secondary)',
-              fontFamily: 'monospace',
-            }}
-          >
-            ⌘K
-          </div>
-        </div>
+            {/* Customizer Drawer Trigger */}
+            <button
+              onClick={() => {
+                soundEffects.playClick();
+                setIsCustomizerOpen(true);
+              }}
+              title="Customize Experience"
+              className="p-2 rounded-full border transition-all hover:scale-105"
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                color: 'inherit',
+              }}
+            >
+              <Sliders size={14} />
+            </button>
 
-        {/* Right Controls: Sound, Google Auth, Customize and THREE LINES */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Experience Customizer Trigger */}
-          <button
-            onClick={() => {
-              soundEffects.playClick();
-              setIsCustomizerOpen(true);
-            }}
-            title="Customize Theme, Fonts & Visuals"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              borderRadius: 'var(--radius-full)',
-              border: '1px solid var(--border-glow)',
-              background: 'rgba(99, 102, 241, 0.1)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Palette size={14} style={{ color: 'var(--accent-cyan)' }} />
-            <span className="hide-on-mobile">Customize</span>
-          </button>
+            {/* Audio Toggle */}
+            <div className="hidden sm:block">
+              <SoundToggle />
+            </div>
 
-          {/* Sound Synthesizer */}
-          <SoundToggle />
+            {/* Theme Toggle (Black / White) */}
+            <button
+              onClick={() => {
+                soundEffects.playClick();
+                toggleTheme();
+              }}
+              title={isDark ? 'Switch to White Theme' : 'Switch to Black Theme'}
+              className="p-2 rounded-full border transition-all hover:scale-105"
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                color: 'inherit',
+              }}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
 
-          {/* Google Sign-in / Authenticated User Profile */}
-          {!isAuthenticated || !currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={openGoogleModal}
-                className="btn btn-ghost"
-                style={{
-                  padding: '7px 12px',
-                  fontSize: '0.84rem',
-                  fontWeight: 600,
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                Sign In
-              </button>
+            {/* Auth CTA or User Profile */}
+            {!isAuthenticated || !currentUser ? (
               <button
                 onClick={() => signInWithGoogle()}
-                className="btn btn-primary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '7px 14px',
-                  fontSize: '0.84rem',
-                  fontWeight: 700,
-                  borderRadius: 'var(--radius-full)',
-                  boxShadow: '0 0 16px rgba(6, 182, 212, 0.35)',
-                }}
+                className="btn btn-primary text-xs py-1.5 px-3.5 sm:px-4 rounded-full font-bold flex items-center gap-2"
               >
-                <div
+                <div className="w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0">
+                  <GoogleIcon size={10} />
+                </div>
+                <span>Join</span>
+              </button>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2 rounded-full p-0.5 border"
                   style={{
-                    width: '18px',
-                    height: '18px',
-                    borderRadius: '50%',
-                    background: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '2px',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
                   }}
                 >
-                  <GoogleIcon size={12} />
-                </div>
-                <span>Get Started</span>
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CreditChip />
-              <div
-                className={isAdmin ? 'badge badge-rose hide-on-mobile' : 'badge badge-cyan hide-on-mobile'}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 10px',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-                onClick={openGoogleModal}
-                title={isAdmin ? 'Lead Administrator Active' : 'Account Active'}
-              >
-                <CheckCircle2 size={13} style={{ color: isAdmin ? 'var(--accent-rose)' : 'var(--accent-cyan)' }} />
-                <span>{isAdmin ? 'Admin' : currentUser.isEmailVerified ? 'Google Verified' : 'Registered'}</span>
-              </div>
+                  <img
+                    src={currentUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=000&color=fff&bold=true`}
+                    alt={currentUser.name}
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                </button>
 
-              {currentUser && (
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '2px',
-                    }}
-                  >
-                    <img
-                      src={
-                        currentUser.avatar && !currentUser.avatar.includes('unsplash.com')
-                          ? currentUser.avatar
-                          : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=0284c7&color=fff&bold=true`
-                      }
-                      alt={currentUser.name}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name || 'User')}&background=0284c7&color=fff&bold=true`;
-                      }}
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        border: isAdmin ? '2px solid var(--accent-rose)' : '2px solid var(--accent-cyan)',
-                        objectFit: 'cover',
-                      }}
+                {/* Dropdown Menu */}
+                {userDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setUserDropdownOpen(false)}
                     />
-                  </button>
-
-                  {userMenuOpen && (
-                    <>
-                      {/* Click-outside dismiss backdrop */}
-                      <div
-                        onClick={() => setUserMenuOpen(false)}
-                        style={{
-                          position: 'fixed',
-                          inset: 0,
-                          zIndex: 9998,
-                          backgroundColor: 'transparent',
-                        }}
-                      />
-                      <div
-                        className="animate-fadeIn"
-                        style={{
-                          position: 'absolute',
-                          top: '46px',
-                          right: 0,
-                          zIndex: 9999,
-                          width: '260px',
-                          padding: '12px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px',
-                          borderRadius: '16px',
-                          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.95), 0 0 25px rgba(99, 102, 241, 0.2)',
-                          border: '1px solid rgba(99, 102, 241, 0.4)',
-                          background: '#090d19',
-                          backgroundImage: 'linear-gradient(180deg, #0f1629 0%, #080c16 100%)',
-                        }}
-                      >
-                      <div style={{ padding: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                          {currentUser.name}
-                        </div>
-                        <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                          {currentUser.email}
-                        </div>
-                        <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
-                          <span className={isAdmin ? 'badge badge-rose' : 'badge badge-cyan'} style={{ fontSize: '0.68rem' }}>
-                            {isAdmin ? '👑 Lead Admin' : '⚡ B.Tech Student'}
+                    <div
+                      className="absolute right-0 top-10 z-50 w-64 p-3 rounded-2xl border shadow-2xl animate-fadeIn space-y-1"
+                      style={{
+                        background: isDark ? '#0a0a0a' : '#ffffff',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)',
+                        color: isDark ? '#ffffff' : '#000000',
+                      }}
+                    >
+                      <div className="p-2 border-b border-white/10 dark:border-white/10 light:border-black/10 mb-1">
+                        <div className="text-xs font-bold truncate">{currentUser.name}</div>
+                        <div className="text-[0.68rem] text-[#737373] truncate">{currentUser.email}</div>
+                        <div className="mt-1.5 flex gap-1.5">
+                          <span className="mono-badge text-[0.62rem] py-0.5 px-2">
+                            {isAdmin ? 'Lead Admin' : 'Student'}
                           </span>
-                          <span className="badge badge-indigo" style={{ fontSize: '0.68rem' }}>
-                            {currentUser.xp} XP
+                          <span className="mono-badge text-[0.62rem] py-0.5 px-2">
+                            {currentUser.xp || 0} XP
                           </span>
                         </div>
                       </div>
 
-                      <a
+                      <Link
                         href="/dashboard"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          soundEffects.playClick();
-                        }}
-                        className="btn-ghost"
-                        style={{ justifyContent: 'flex-start', fontSize: '0.85rem', padding: '8px', textDecoration: 'none' }}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
                       >
-                        <LayoutDashboard size={15} /> Dashboard
-                      </a>
+                        <LayoutDashboard size={14} /> Dashboard
+                      </Link>
 
-                      <a
-                        href={`/profile/${currentUser.username}`}
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          soundEffects.playClick();
-                        }}
-                        className="btn-ghost"
-                        style={{ justifyContent: 'flex-start', fontSize: '0.85rem', padding: '8px', textDecoration: 'none' }}
-                      >
-                        <UserCheck size={15} /> My Profile
-                      </a>
-
-                      <a
+                      <Link
                         href="/notes"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          soundEffects.playClick();
-                        }}
-                        className="btn-ghost"
-                        style={{ justifyContent: 'flex-start', fontSize: '0.85rem', padding: '8px', textDecoration: 'none' }}
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
                       >
-                        <BookOpen size={15} style={{ color: 'var(--accent-cyan)' }} /> B.Tech Notes Drive
-                      </a>
+                        <BookOpen size={14} /> Notes Drive
+                      </Link>
 
                       {isAdmin && (
-                        <a
+                        <Link
                           href="/admin"
-                          onClick={() => {
-                            setUserMenuOpen(false);
-                            soundEffects.playClick();
-                          }}
-                          className="btn-ghost"
-                          style={{
-                            justifyContent: 'flex-start',
-                            fontSize: '0.85rem',
-                            padding: '8px',
-                            textDecoration: 'none',
-                            color: 'var(--accent-rose)',
-                          }}
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 text-inherit no-underline"
                         >
-                          <Shield size={15} /> Admin Control Center
-                        </a>
+                          <Shield size={14} /> Admin Portal
+                        </Link>
                       )}
 
-                      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '6px', marginTop: '4px' }}>
+                      <div className="border-t border-white/10 dark:border-white/10 light:border-black/10 pt-1 mt-1">
                         <button
                           onClick={() => {
-                            setUserMenuOpen(false);
-                            signInWithGoogle();
-                          }}
-                          className="btn-secondary"
-                          style={{ width: '100%', fontSize: '0.78rem', padding: '7px', marginBottom: '4px' }}
-                        >
-                          Switch Google Account
-                        </button>
-                        <button
-                          onClick={() => {
-                            setUserMenuOpen(false);
+                            setUserDropdownOpen(false);
                             logout();
                           }}
-                          className="btn-ghost"
-                          style={{ width: '100%', fontSize: '0.78rem', padding: '7px', color: 'var(--accent-rose)', justifyContent: 'center' }}
+                          className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-semibold text-[#737373] hover:text-white transition-colors"
                         >
-                          <LogOut size={14} /> Sign Out
+                          <LogOut size={13} /> Sign Out
                         </button>
                       </div>
                     </div>
                   </>
                 )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* THE THREE LINES BUTTON (ALL FEATURES ENCLOSED HERE) */}
-          <button
-            onClick={() => {
-              soundEffects.playClick();
-              setAllFunctionsOpen(!allFunctionsOpen);
-            }}
-            title="Click to view all platform features"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-full)',
-              background: allFunctionsOpen ? 'var(--gradient-nirvana)' : 'rgba(99, 102, 241, 0.1)',
-              border: '1px solid var(--border-glow)',
-              color: allFunctionsOpen ? '#ffffff' : 'var(--text-primary)',
-              cursor: 'pointer',
-              fontWeight: 800,
-              fontSize: '0.84rem',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: allFunctionsOpen ? '0 0 20px rgba(99, 102, 241, 0.4)' : 'none',
-            }}
-          >
-            {allFunctionsOpen ? (
-              <X size={18} />
-            ) : (
-              /* The Three Clean Lines */
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  width: '18px',
-                  height: '14px',
-                }}
-              >
-                <span style={{ height: '2px', width: '100%', background: 'currentColor', borderRadius: '2px' }} />
-                <span style={{ height: '2px', width: '100%', background: 'currentColor', borderRadius: '2px' }} />
-                <span style={{ height: '2px', width: '100%', background: 'currentColor', borderRadius: '2px' }} />
               </div>
             )}
-            <span style={{ letterSpacing: '0.5px' }}>{allFunctionsOpen ? 'Close' : 'Features'}</span>
-          </button>
-        </div>
-      </div>
 
-      {/* ALL FEATURES DRAWER (ONLY VISIBLE WHEN CLICKING ON THE THREE LINES BUTTON) */}
-      {allFunctionsOpen && (
-        <>
-          {/* Dimmed full-page backdrop preventing background bleed-through */}
-          <div
-            onClick={() => {
-              soundEffects.playClick();
-              setAllFunctionsOpen(false);
-            }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              top: '70px',
-              backgroundColor: 'rgba(2, 6, 23, 0.92)',
-              backdropFilter: 'blur(16px)',
-              zIndex: 9990,
-              animation: 'fadeIn 0.2s ease-out',
-            }}
-          />
-
-          <div
-            className="animate-fadeIn"
-            style={{
-              position: 'fixed',
-              top: '70px',
-              left: 0,
-              right: 0,
-              maxHeight: 'calc(100vh - 70px)',
-              overflowY: 'auto',
-              borderTop: '1px solid rgba(99, 102, 241, 0.35)',
-              borderBottom: '2px solid rgba(99, 102, 241, 0.45)',
-              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.98), 0 0 40px rgba(99, 102, 241, 0.25)',
-              padding: '28px 20px 48px',
-              zIndex: 9995,
-              background: '#090d1a',
-              backgroundImage: 'radial-gradient(ellipse at top, #0f172a 0%, #060913 100%)',
-            }}
-          >
-            <div className="container-custom">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '22px',
-                  paddingBottom: '14px',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="badge badge-cyan" style={{ fontSize: '0.72rem' }}>
-                      PLATFORM DIRECTORY
-                    </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      • Click any feature to launch
-                    </span>
-                  </div>
-                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-                    All Features &amp; Capabilities
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setAllFunctionsOpen(false)}
-                  className="btn-ghost"
-                  style={{ padding: '8px', color: 'var(--text-muted)' }}
-                  title="Close features"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                  gap: '20px',
-                }}
-              >
-                {featureDirectory.map((cat, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: '20px',
-                      borderRadius: 'var(--radius-lg)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      background: '#0f172a',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.55)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '0.82rem',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        color: cat.color,
-                        marginBottom: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: cat.color,
-                        }}
-                      />
-                      {cat.category}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {cat.items.map((item, itemIdx) => (
-                        <a
-                          key={itemIdx}
-                          href={item.href}
-                          onClick={() => {
-                            setAllFunctionsOpen(false);
-                            soundEffects.playClick();
-                          }}
-                          className="btn-ghost"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            justifyContent: 'space-between',
-                            padding: '10px',
-                            borderRadius: 'var(--radius-md)',
-                            textDecoration: 'none',
-                            textAlign: 'left',
-                            background: 'rgba(255, 255, 255, 0.02)',
-                            border: '1px solid transparent',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = cat.color;
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(99, 102, 241, 0.12)';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.02)';
-                          }}
-                        >
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                            <div style={{ marginTop: '2px', color: cat.color }}>{item.icon}</div>
-                            <div>
-                              <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
-                                {item.label}
-                              </div>
-                              <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '2px' }}>
-                                {item.desc}
-                              </div>
-                            </div>
-                          </div>
-                          {item.badge && (
-                            <span
-                              className="badge badge-amber"
-                              style={{
-                                fontSize: '0.64rem',
-                                padding: '2px 6px',
-                                flexShrink: 0,
-                                marginLeft: '8px',
-                              }}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Admin Quick Launch Bar - Only when genuinely authenticated as Admin */}
-              {isAuthenticated && isAdmin && currentUser && (
-                <div
-                  style={{
-                    marginTop: '20px',
-                    padding: '14px 20px',
-                    borderRadius: 'var(--radius-md)',
-                    background: '#1a0e1c',
-                    border: '1px solid rgba(244, 63, 94, 0.45)',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Shield size={18} style={{ color: 'var(--accent-rose)' }} />
-                    <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#ffffff' }}>
-                      Admin Controls Active: {currentUser.email}
-                    </span>
-                  </div>
-                  <a
-                    href="/admin"
-                    onClick={() => setAllFunctionsOpen(false)}
-                    className="btn btn-primary"
-                    style={{ fontSize: '0.8rem', padding: '6px 14px' }}
-                  >
-                    Launch Admin Control Center
-                  </a>
-                </div>
-              )}
-            </div>
+            {/* Mobile Hamburger Toggle */}
+            <button
+              onClick={() => {
+                soundEffects.playClick();
+                setMobileMenuOpen(!mobileMenuOpen);
+              }}
+              className="lg:hidden p-2 rounded-full border"
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+                color: 'inherit',
+              }}
+            >
+              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+            </button>
           </div>
-        </>
-      )}
+        </div>
+      </header>
 
-      <style jsx>{`
-        @media (max-width: 1024px) {
-          .hide-on-tablet {
-            display: none !important;
-          }
-        }
-        @media (max-width: 768px) {
-          .navbar-search-bar {
-            display: none !important;
-          }
-          .hide-on-mobile {
-            display: none !important;
-          }
-        }
-      `}</style>
-    </header>
+      {/* Fullscreen Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 flex flex-col justify-between p-8 pt-28 animate-fadeIn"
+          style={{
+            background: isDark ? '#000000' : '#ffffff',
+            color: isDark ? '#ffffff' : '#000000',
+          }}
+        >
+          <div className="space-y-6">
+            <div className="text-xs font-bold uppercase tracking-widest text-[#737373]">
+              Navigation
+            </div>
+            <nav className="flex flex-col space-y-4">
+              {navLinks.map((link, idx) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-display text-2xl sm:text-3xl font-black text-inherit no-underline hover:opacity-70 transition-opacity flex items-center justify-between"
+                >
+                  <span>{link.label}</span>
+                  <span className="text-xs font-mono text-[#737373]">0{idx + 1}</span>
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          <div className="pt-8 border-t border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-between">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsCustomizerOpen(true);
+              }}
+              className="flex items-center gap-2 text-xs font-bold text-[#737373] hover:text-white"
+            >
+              <Sliders size={14} /> Customize TYGN
+            </button>
+
+            {!isAuthenticated ? (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  signInWithGoogle();
+                }}
+                className="btn btn-primary text-xs py-2 px-5"
+              >
+                Sign In
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  logout();
+                }}
+                className="text-xs font-bold text-[#737373]"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -3,250 +3,219 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
+  ArrowRight, 
   BookOpen, 
-  Layers, 
+  Code, 
   Trophy, 
   Users, 
-  TrendingUp, 
-  ArrowRight, 
   Sparkles,
-  CheckCircle2,
-  ExternalLink
+  Check
 } from 'lucide-react';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 interface Pillar {
   id: string;
+  num: string;
   name: string;
-  verb: string;
-  tagline: string;
-  desc: string;
-  color: string;
-  icon: any;
+  title: string;
+  summary: string;
   deliverables: string[];
   link: string;
   ctaText: string;
 }
 
 export function WhatIsTYGN() {
+  const { isDark } = useThemeCustomizer();
   const [activeTab, setActiveTab] = useState<string>('learn');
 
   const pillars: Pillar[] = [
     {
       id: 'learn',
+      num: '01',
       name: 'Learn',
-      verb: 'Acquire Knowledge that Matters',
-      tagline: 'Moving beyond passive tutorials into high-yield engineering application.',
-      desc: 'Access curated B.Tech academic notes, engineering roadmaps, industry tech radars, and specialized workshops led by experienced student mentors.',
-      color: '#00e5ff',
-      icon: BookOpen,
+      title: 'Real-world knowledge over theoretical drift.',
+      summary: 'Curated B.Tech curriculum notes, role-based skill trees, industry radars, and practical workshops led by senior student engineers.',
       deliverables: [
-        'Curated B.Tech Semester & Branch Notes Drive',
-        'Role-Based Engineering Skill Trees (Fullstack, AI, Cloud)',
-        'Tech Radar 2026: Adopt, Trial & Assess Frameworks',
-        'Hands-on interactive technical workshops'
+        'Curated Semester & Branch Academic Notes Drive',
+        'Full-Stack, Cloud & AI Engineering Roadmaps',
+        '2026 Tech Radar: Industry-Vetted Frameworks',
+        'Hands-on architecture workshops'
       ],
       link: '/notes',
-      ctaText: 'Access Notes & Resources'
+      ctaText: 'Explore Academic Hub'
     },
     {
       id: 'build',
+      num: '02',
       name: 'Build',
-      verb: 'Turn Raw Ideas into Live Software',
-      tagline: 'Where theoretical concepts become deployed open-source software.',
-      desc: 'Form hackathon squads, contribute to student open-source repositories, showcase your portfolio projects, and build working software that employers actually evaluate.',
-      color: '#6366f1',
-      icon: Layers,
+      title: 'Shipped software beats resume bullet points.',
+      summary: 'Collaborative projects, student open-source repositories, and developer tools where students build production-grade applications.',
       deliverables: [
-        'Open-Source Student Project Showcase',
-        'Collab Finder: Pair with developers and designers',
-        'AI Resume Lab: ATS formatting and tech audits',
-        'Real-world portfolio incubators and review circles'
+        'Student Portfolio & Open Source Showcase',
+        'Multi-disciplinary build sprints',
+        'AI Resume Lab & ATS Scoring tools',
+        'Code review & architecture feedback'
       ],
       link: '/projects',
-      ctaText: 'Explore Projects Hub'
+      ctaText: 'View Student Projects'
     },
     {
       id: 'compete',
+      num: '03',
       name: 'Compete',
-      verb: 'Push Boundaries in Live Arenas',
-      tagline: 'Pressure forges elite engineering problem solvers.',
-      desc: 'Participate in inter-college hackathons, live interactive quiz rooms, cybersecurity CTF challenges, and algorithmic speed rounds designed to sharpen technical reflexes.',
-      color: '#f59e0b',
-      icon: Trophy,
+      title: 'Testing instincts under high-pressure constraints.',
+      summary: 'Internal hackathons, code jams, Mentimeter-style live quiz rooms, and national tech competition squads.',
       deliverables: [
-        'Nirvana Live Room: Real-time PIN presentation quizzes',
-        'College Hackathons and coding hack sprints',
-        'CTFs and ethical hacking challenges',
-        'National and regional tech competitions hub'
+        'Live Interactive Presentation & Quiz Rooms',
+        'Hackathon preparation bootcamps',
+        'Collab Finder for hackathon squads',
+        'Live leaderboards & platform recognition'
       ],
       link: '/events',
       ctaText: 'Browse Competitions'
     },
     {
       id: 'connect',
+      num: '04',
       name: 'Connect',
-      verb: 'Build Your Lifetime Peer Network',
-      tagline: 'Great careers are built on authentic peer networks.',
-      desc: 'Surround yourself with ambitious student builders, hackathon co-founders, speakers, and industry alumni across 15+ university campuses.',
-      color: '#a855f7',
-      icon: Users,
+      title: 'The network that accelerates your career trajectory.',
+      summary: 'A verified student network spanning top engineering campuses, alumni in big tech, and early-stage startup founders.',
       deliverables: [
-        'Discord-style real-time channels with role badges',
-        'Community Moments: Project milestones and hackathon wins',
-        'College Tech Club partnerships and cross-campus links',
-        'Verified internship, fellowship, and job referrals'
+        'Discord-style technical topic channels',
+        'Collab Finder for co-founders & project teammates',
+        'Direct referral network for verified roles',
+        'Cross-college developer networking'
       ],
       link: '/community',
-      ctaText: 'Join Community Channels'
+      ctaText: 'Join Student Community'
     },
     {
       id: 'grow',
+      num: '05',
       name: 'Grow',
-      verb: 'Master Professional Polish & Etiquette',
-      tagline: 'Technical brilliance needs executive communication to thrive.',
-      desc: 'Step into the TYGN Growth Hub to sharpen verbal manners, communication clarity, interview demeanor, and executive presence with interactive adaptive coaching.',
-      color: '#10b981',
-      icon: TrendingUp,
+      title: 'Mastering the skills code cannot teach.',
+      summary: 'Our signature personal growth platform: verbal manners, executive presence, situational etiquette, and interview simulation.',
       deliverables: [
-        'Verbal Manners & Professional Etiquette Quiz Engine',
-        'Conversation Simulator: Multi-turn interview practice',
-        'Say It Better: Flagship tone refactoring game',
-        'Daily Growth Challenges and streak gamification'
+        '10-Question Adaptive Communication Diagnostic',
+        'Flagship "Say It Better" tone refinement arena',
+        'Real-world workplace dilemma scenarios',
+        'Daily 30-second speaking challenges & streak engine'
       ],
       link: '/growth',
-      ctaText: 'Enter Growth Hub'
+      ctaText: 'Enter Personal Growth Hub'
     }
   ];
 
-  const currentPillar = pillars.find(p => p.id === activeTab) || pillars[0];
-  const CurrentIcon = currentPillar.icon;
+  const activePillar = pillars.find(p => p.id === activeTab) || pillars[0];
 
   return (
-    <section className="relative z-20 py-20 px-4 max-w-6xl mx-auto">
-      {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-14">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-4">
-          <Sparkles size={13} /> The Philosophy
+    <div id="story" className="space-y-28 sm:space-y-36">
+      {/* SECTION 02 — THE MANIFESTO */}
+      <section className="container-custom">
+        <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
+          <div className="editorial-eyebrow">
+            SECTION 02 — THE MANIFESTO
+          </div>
+          <h2 className="editorial-title text-4xl sm:text-6xl md:text-7xl">
+            More Than A Community.
+          </h2>
+          <div className="space-y-6 text-base sm:text-xl text-[#737373] dark:text-[#a3a3a3] light:text-[#404040] leading-relaxed">
+            <p>
+              Engineering universities teach syntax, operating systems, and discrete math. But building real products, negotiating offers, presenting to executive stakeholders, winning hackathons, and developing professional presence happens outside the classroom.
+            </p>
+            <p className="text-inherit font-medium">
+              TechYOGeek Nirvana was founded by students to solve that exact disconnect. We provide the ecosystem where technical ambition meets practical execution.
+            </p>
+          </div>
         </div>
-        <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-display mb-4">
-          More Than a Community.
-        </h2>
-        <p className="text-slate-300/80 text-base sm:text-lg leading-relaxed">
-          TYGN is a complete student technology ecosystem built on five interconnected pillars designed to turn ambitious engineering students into world-class builders.
-        </p>
-      </div>
+      </section>
 
-      {/* Interactive Pillar Switcher */}
-      <div className="flex flex-wrap items-center justify-center gap-2.5 mb-10">
-        {pillars.map(pillar => {
-          const Icon = pillar.icon;
-          const isActive = activeTab === pillar.id;
-          return (
-            <button
-              key={pillar.id}
-              onClick={() => {
-                soundEffects.playClick();
-                setActiveTab(pillar.id);
-              }}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all border ${
-                isActive
-                  ? 'border-white/20 bg-white/10 text-white shadow-lg'
-                  : 'border-white/5 bg-white/[0.02] text-slate-400 hover:text-white hover:bg-white/[0.05]'
-              }`}
-              style={{
-                borderColor: isActive ? pillar.color : undefined,
-                boxShadow: isActive ? `0 0 20px ${pillar.color}25` : undefined
-              }}
-            >
-              <Icon size={17} style={{ color: isActive ? pillar.color : 'inherit' }} />
-              <span>{pillar.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Active Pillar Interactive Showcase Card */}
-      <div 
-        className="glass-card rounded-3xl p-8 sm:p-12 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl transition-all"
-        style={{
-          background: `radial-gradient(ellipse at top right, ${currentPillar.color}10, transparent 65%), linear-gradient(180deg, rgba(13, 18, 29, 0.85) 0%, rgba(6, 9, 16, 0.95) 100%)`
-        }}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left Column: Story & Philosophy */}
-          <div className="lg:col-span-7">
-            <div className="flex items-center gap-3 mb-4">
-              <div 
-                className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md"
-                style={{
-                  backgroundColor: `${currentPillar.color}20`,
-                  border: `1px solid ${currentPillar.color}40`,
-                }}
-              >
-                <CurrentIcon size={24} style={{ color: currentPillar.color }} />
+      {/* SECTION 03 — ONE ECOSYSTEM. MANY PATHS. */}
+      <section className="container-custom">
+        <div className="space-y-12">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
+            <div>
+              <div className="editorial-eyebrow">
+                SECTION 03 — ARCHITECTURE
               </div>
-              <div>
-                <span 
-                  className="text-xs font-bold uppercase tracking-widest block"
-                  style={{ color: currentPillar.color }}
+              <h2 className="editorial-title text-3xl sm:text-5xl mt-2">
+                One Ecosystem. Many Paths.
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-[#737373] max-w-sm">
+              Five core pillars designed to take you from first-year explorer to high-performing engineer.
+            </p>
+          </div>
+
+          {/* Pillar Selector Tabs */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1.5 rounded-2xl bg-white/[0.04] dark:bg-white/[0.04] light:bg-black/[0.03] border border-white/10 dark:border-white/10 light:border-black/10">
+            {pillars.map((pillar) => {
+              const isSelected = activeTab === pillar.id;
+              return (
+                <button
+                  key={pillar.id}
+                  onClick={() => {
+                    soundEffects.playClick();
+                    setActiveTab(pillar.id);
+                  }}
+                  className={`py-3 px-4 rounded-xl text-left transition-all flex flex-col gap-1 ${
+                    isSelected
+                      ? isDark
+                        ? 'bg-white text-black font-bold shadow-md'
+                        : 'bg-black text-white font-bold shadow-md'
+                      : 'text-[#737373] hover:text-white dark:hover:text-white light:hover:text-black'
+                  }`}
                 >
-                  Pillar &bull; {currentPillar.name}
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-display">
-                  {currentPillar.verb}
-                </h3>
-              </div>
-            </div>
-
-            <p className="text-lg text-slate-200 font-medium mb-3 italic">
-              &ldquo;{currentPillar.tagline}&rdquo;
-            </p>
-
-            <p className="text-slate-300/90 text-sm sm:text-base leading-relaxed mb-6">
-              {currentPillar.desc}
-            </p>
-
-            <Link
-              href={currentPillar.link}
-              onClick={() => soundEffects.playClick()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs sm:text-sm text-white shadow-lg transition-transform transform hover:-translate-y-0.5"
-              style={{
-                backgroundColor: currentPillar.color,
-                boxShadow: `0 8px 24px ${currentPillar.color}40`
-              }}
-            >
-              <span>{currentPillar.ctaText}</span>
-              <ArrowRight size={16} />
-            </Link>
+                  <span className="text-[0.65rem] font-mono opacity-60">
+                    {pillar.num}
+                  </span>
+                  <span className="text-sm sm:text-base font-display font-extrabold tracking-tight">
+                    {pillar.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Right Column: Key Deliverables Panel */}
-          <div className="lg:col-span-5">
-            <div className="rounded-2xl p-6 bg-white/[0.03] border border-white/10 shadow-inner">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentPillar.color }} />
-                Platform Capabilities
+          {/* Active Pillar Card */}
+          <div className="mono-card p-8 sm:p-14 space-y-8 animate-fadeIn">
+            <div className="space-y-4 max-w-2xl">
+              <div className="text-xs font-mono uppercase tracking-widest text-[#737373]">
+                Pillar {activePillar.num} {'//'} {activePillar.name}
               </div>
+              <h3 className="font-display font-black text-2xl sm:text-4xl tracking-tight text-inherit">
+                {activePillar.title}
+              </h3>
+              <p className="text-sm sm:text-base text-[#737373] dark:text-[#a3a3a3] light:text-[#404040] leading-relaxed">
+                {activePillar.summary}
+              </p>
+            </div>
 
-              <div className="space-y-3.5">
-                {currentPillar.deliverables.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <CheckCircle2 
-                      size={18} 
-                      className="shrink-0 mt-0.5" 
-                      style={{ color: currentPillar.color }} 
-                    />
-                    <span className="text-xs sm:text-sm text-slate-200 leading-snug">
-                      {item}
-                    </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10">
+              {activePillar.deliverables.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-inherit">
+                  <div className="w-5 h-5 rounded-full border border-current/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <Check size={12} />
                   </div>
-                ))}
-              </div>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4">
+              <Link
+                href={activePillar.link}
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-primary inline-flex items-center gap-2 text-xs sm:text-sm font-bold"
+              >
+                <span>{activePillar.ctaText}</span>
+                <ArrowRight size={14} />
+              </Link>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

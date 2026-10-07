@@ -16,7 +16,7 @@ import {
   X,
   ArrowRight,
   Shield,
-  Palette,
+  Sliders,
   Gamepad2,
   CheckCircle2
 } from 'lucide-react';
@@ -41,7 +41,7 @@ export function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { isAdmin } = useAuth();
-  const { setIsCustomizerOpen } = useThemeCustomizer();
+  const { isDark, setIsCustomizerOpen } = useThemeCustomizer();
 
   // Listen for Cmd+K or Ctrl+K
   useEffect(() => {
@@ -73,25 +73,20 @@ export function CommandPalette() {
   const roadmaps = dbStore.getLearningPaths();
 
   const baseItems: SearchItem[] = [
-    { id: 'act_growth', title: 'Launch Growth Hub & Verbal Manners Coach', category: 'Personal Growth', type: 'action', url: '/growth', icon: <Sparkles size={16} style={{ color: '#10b981' }} /> },
-    { id: 'act_quiz_diagnostic', title: 'Take 10-Q Verbal Manners Diagnostic', category: 'Personal Growth', type: 'action', url: '/growth#quiz', icon: <CheckCircle2 size={16} style={{ color: '#06b6d4' }} /> },
-    { id: 'act_game_say_better', title: 'Play "Say It Better" Communication Game', category: 'Games Arena', type: 'action', url: '/games', icon: <Gamepad2 size={16} style={{ color: '#ec4899' }} /> },
-    { id: 'act_customize', title: 'Customize Experience (10 Themes, Fonts, Sliders)', category: 'Quick Action', type: 'action', url: '#customize', icon: <Palette size={16} style={{ color: '#8b5cf6' }} /> },
-    { id: 'act_ai', title: 'Ask Nirvana AI Assistant', category: 'Quick Action', type: 'action', url: '#ai-chat', icon: <Sparkles size={16} style={{ color: 'var(--accent-indigo)' }} /> },
-    { id: 'act_resume', title: 'Analyze Resume in AI Resume Lab', category: 'Quick Action', type: 'action', url: '/resume-lab', icon: <FileText size={16} style={{ color: 'var(--accent-cyan)' }} /> },
-    { id: 'act_quiz_create', title: 'Create Live Quiz / Presentation', category: 'Quick Action', type: 'action', url: '/live/create', icon: <Radio size={16} style={{ color: 'var(--accent-amber)' }} /> },
-    { id: 'act_collab', title: 'Find Hackathon Teammates (Collab Finder)', category: 'Quick Action', type: 'action', url: '/collab-finder', icon: <Users size={16} style={{ color: 'var(--accent-emerald)' }} /> },
-    { id: 'nav_growth', title: 'Growth Hub: Manners, Etiquette & Simulator', category: 'Navigation', type: 'navigation', url: '/growth', icon: <Sparkles size={16} style={{ color: '#10b981' }} /> },
-    { id: 'nav_games', title: 'Games Arena: Say It Better & Dilemmas', category: 'Navigation', type: 'navigation', url: '/games', icon: <Gamepad2 size={16} style={{ color: '#ec4899' }} /> },
-    { id: 'nav_community', title: 'Community Discord-style Channels', category: 'Navigation', type: 'navigation', url: '/community', icon: <Users size={16} /> },
+    { id: 'act_growth', title: 'Launch Growth Hub & Verbal Manners Coach', category: 'Personal Growth', type: 'action', url: '/growth', icon: <Sparkles size={16} /> },
+    { id: 'act_quiz_diagnostic', title: 'Take 10-Q Verbal Manners Diagnostic', category: 'Personal Growth', type: 'action', url: '/growth#quiz', icon: <CheckCircle2 size={16} /> },
+    { id: 'act_game_say_better', title: 'Play "Say It Better" Communication Game', category: 'Games Arena', type: 'action', url: '/games', icon: <Gamepad2 size={16} /> },
+    { id: 'act_customize', title: 'Customize Experience (Theme, Typography, Density)', category: 'Quick Action', type: 'action', url: '#customize', icon: <Sliders size={16} /> },
+    { id: 'act_resume', title: 'Analyze Resume in AI Resume Lab', category: 'Quick Action', type: 'action', url: '/resume-lab', icon: <FileText size={16} /> },
+    { id: 'act_collab', title: 'Find Hackathon Teammates (Collab Finder)', category: 'Quick Action', type: 'action', url: '/collab-finder', icon: <Users size={16} /> },
+    { id: 'nav_growth', title: 'Growth Hub: Manners, Etiquette & Simulator', category: 'Navigation', type: 'navigation', url: '/growth', icon: <Sparkles size={16} /> },
+    { id: 'nav_games', title: 'Games Arena: Say It Better & Dilemmas', category: 'Navigation', type: 'navigation', url: '/games', icon: <Gamepad2 size={16} /> },
+    { id: 'nav_community', title: 'Community Channels & Real-Time Chat', category: 'Navigation', type: 'navigation', url: '/community', icon: <Users size={16} /> },
     { id: 'nav_opps', title: 'Browse Jobs & Internships Marketplace', category: 'Navigation', type: 'navigation', url: '/opportunities', icon: <Briefcase size={16} /> },
     { id: 'nav_events', title: 'Upcoming Events & Hackathons', category: 'Navigation', type: 'navigation', url: '/events', icon: <Calendar size={16} /> },
-    { id: 'nav_live', title: 'Nirvana Live (Join with PIN)', category: 'Navigation', type: 'navigation', url: '/live/join', icon: <Radio size={16} /> },
     { id: 'nav_radar', title: 'Interactive Tech Radar 2026', category: 'Navigation', type: 'navigation', url: '/tech-radar', icon: <Compass size={16} /> },
-    { id: 'nav_interview', title: 'AI Mock Interview Room', category: 'Navigation', type: 'navigation', url: '/ai-interview', icon: <Code size={16} /> },
-    { id: 'nav_moments', title: 'Nirvana Moments (Community Milestones)', category: 'Navigation', type: 'navigation', url: '/moments', icon: <Sparkles size={16} /> },
-    { id: 'nav_projects', title: 'Projects Showcase Hub', category: 'Navigation', type: 'navigation', url: '/projects', icon: <Layers size={16} /> },
-    ...(isAdmin ? [{ id: 'nav_admin', title: 'Admin Control Center & Moderation', category: 'Admin', type: 'navigation' as const, url: '/admin', icon: <Shield size={16} style={{ color: 'var(--accent-rose)' }} /> }] : [])
+    { id: 'nav_notes', title: 'B.Tech Academic Drive Notes', category: 'Navigation', type: 'navigation', url: '/notes', icon: <FileText size={16} /> },
+    ...(isAdmin ? [{ id: 'nav_admin', title: 'Admin Control Center & Moderation', category: 'Admin', type: 'navigation' as const, url: '/admin', icon: <Shield size={16} /> }] : [])
   ];
 
   const oppItems: SearchItem[] = opportunities.slice(0, 5).map(o => ({
@@ -100,7 +95,7 @@ export function CommandPalette() {
     category: 'Opportunities',
     type: 'opportunity',
     url: `/opportunities?id=${o.id}`,
-    icon: <Briefcase size={16} style={{ color: 'var(--accent-cyan)' }} />
+    icon: <Briefcase size={16} />
   }));
 
   const eventItems: SearchItem[] = events.slice(0, 4).map(e => ({
@@ -109,28 +104,10 @@ export function CommandPalette() {
     category: 'Events',
     type: 'event',
     url: `/events?id=${e.id}`,
-    icon: <Calendar size={16} style={{ color: 'var(--accent-amber)' }} />
+    icon: <Calendar size={16} />
   }));
 
-  const quizItems: SearchItem[] = quizzes.map(q => ({
-    id: 'qz_' + q.id,
-    title: q.title,
-    category: 'Quizzes',
-    type: 'quiz',
-    url: `/live/create?quizId=${q.id}`,
-    icon: <Radio size={16} style={{ color: 'var(--accent-indigo)' }} />
-  }));
-
-  const roadmapItems: SearchItem[] = roadmaps.map(r => ({
-    id: 'rm_' + r.id,
-    title: `${r.title} Roadmap`,
-    category: 'Learning Paths',
-    type: 'roadmap',
-    url: `/roadmaps?id=${r.id}`,
-    icon: <Compass size={16} style={{ color: 'var(--accent-emerald)' }} />
-  }));
-
-  const allItems = [...baseItems, ...oppItems, ...eventItems, ...quizItems, ...roadmapItems];
+  const allItems = [...baseItems, ...oppItems, ...eventItems];
 
   const filteredItems = query.trim() === ''
     ? baseItems
@@ -142,9 +119,7 @@ export function CommandPalette() {
   const handleSelect = (item: SearchItem) => {
     soundEffects.playClick();
     setIsOpen(false);
-    if (item.url === '#ai-chat') {
-      window.dispatchEvent(new CustomEvent('toggle-nirvana-ai'));
-    } else if (item.url === '#customize') {
+    if (item.url === '#customize') {
       setIsCustomizerOpen(true);
     } else {
       router.push(item.url);
@@ -168,164 +143,99 @@ export function CommandPalette() {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        paddingTop: '12vh',
-      }}
+      className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-start justify-center pt-[12vh] p-4"
       onClick={() => setIsOpen(false)}
     >
       <div
-        className="glass-panel"
+        className="w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col animate-fadeIn"
         style={{
-          width: '100%',
-          maxWidth: '620px',
-          borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-lg)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          border: '1px solid var(--border-glass)',
+          background: isDark ? '#080808' : '#ffffff',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
+          color: isDark ? '#ffffff' : '#000000',
         }}
         onClick={e => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
         {/* Search Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-          }}
+        <div 
+          className="flex items-center gap-3 p-4 sm:p-5 border-b"
+          style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)' }}
         >
-          <Search size={20} style={{ color: 'var(--accent-indigo)' }} />
+          <Search size={18} className="text-[#737373] shrink-0" />
           <input
             ref={inputRef}
             type="text"
-            placeholder="Type a command or search events, jobs, quizzes, roadmaps..."
+            placeholder="Type a command or jump to feature..."
             value={query}
             onChange={e => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--text-primary)',
-              fontSize: '1rem',
-              fontFamily: 'var(--font-sans)',
-            }}
+            className="flex-1 bg-transparent border-none outline-none text-sm sm:text-base font-sans p-0 shadow-none focus:ring-0"
+            style={{ color: 'inherit' }}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--text-muted)',
-              }}
-            >
+          <div className="flex items-center gap-2">
+            <span className="text-[0.68rem] font-mono px-2 py-0.5 rounded border border-white/10 text-[#737373]">
               ESC
             </span>
             <button
               onClick={() => setIsOpen(false)}
-              className="btn-ghost"
-              style={{ padding: '4px', borderRadius: '4px' }}
+              className="p-1 rounded text-[#737373] hover:text-white"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
 
         {/* Results List */}
-        <div style={{ maxHeight: '380px', overflowY: 'auto', padding: '8px' }}>
+        <div className="max-h-96 overflow-y-auto p-2 space-y-1">
           {filteredItems.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No results found for &ldquo;{query}&rdquo;
+            <div className="p-8 text-center text-xs text-[#737373]">
+              No matching commands or pages found
             </div>
           ) : (
             filteredItems.map((item, index) => {
               const isSelected = index === selectedIndex;
               return (
-                <div
+                <button
                   key={item.id}
                   onClick={() => handleSelect(item)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer',
-                    backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
-                    border: isSelected ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={`w-full text-left p-3 rounded-xl flex items-center justify-between text-xs sm:text-sm font-medium transition-all ${
+                    isSelected
+                      ? isDark 
+                        ? 'bg-white text-black font-bold' 
+                        : 'bg-black text-white font-bold'
+                      : isDark
+                      ? 'text-[#d4d4d4] hover:bg-white/5 hover:text-white'
+                      : 'text-[#404040] hover:bg-black/5 hover:text-black'
+                  }`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: 'var(--radius-sm)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-                        {item.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {item.category}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-3 truncate">
+                    <span className="shrink-0">{item.icon}</span>
+                    <span className="truncate">{item.title}</span>
                   </div>
-                  <ArrowRight
-                    size={15}
-                    style={{
-                      color: isSelected ? 'var(--accent-indigo)' : 'var(--text-muted)',
-                      opacity: isSelected ? 1 : 0.4,
-                    }}
-                  />
-                </div>
+                  <span 
+                    className={`text-[0.65rem] uppercase font-mono px-2 py-0.5 rounded shrink-0 ${
+                      isSelected
+                        ? isDark ? 'bg-black/10 text-black' : 'bg-white/10 text-white'
+                        : 'border border-white/10 text-[#737373]'
+                    }`}
+                  >
+                    {item.category}
+                  </span>
+                </button>
               );
             })
           )}
         </div>
 
-        {/* Footer shortcuts */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 20px',
-            borderTop: '1px solid var(--border-subtle)',
-            fontSize: '0.75rem',
-            color: 'var(--text-muted)',
-            background: 'rgba(0, 0, 0, 0.2)',
-          }}
+        {/* Footer Hint */}
+        <div 
+          className="p-2.5 px-4 border-t flex items-center justify-between text-[0.68rem] text-[#737373]"
+          style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)' }}
         >
-          <span>Use ↑ ↓ to navigate</span>
+          <span>Navigate with ↑ ↓ keys</span>
           <span>Press Enter to select</span>
-          <span>Techyogeek Nirvana Command Center</span>
         </div>
       </div>
     </div>

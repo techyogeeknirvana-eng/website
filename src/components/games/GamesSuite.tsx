@@ -2,233 +2,263 @@
 
 import React, { useState } from 'react';
 import { 
+  ArrowRight, 
   Gamepad2, 
-  Sparkles, 
-  CheckCircle2, 
-  XCircle, 
-  MessageSquare, 
-  BookOpen, 
-  ShieldAlert,
-  ArrowRight
+  ShieldAlert, 
+  Check, 
+  RotateCcw,
+  Clock,
+  Sparkles
 } from 'lucide-react';
-import { SayItBetterGame } from './SayItBetterGame';
 import { ETIQUETTE_DILEMMAS, VOCABULARY_CHALLENGES } from '@/data/gamesData';
 import { growthProgressStore } from '@/lib/growth/progressStore';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
-export function GamesSuite() {
-  const [activeTab, setActiveTab] = useState<'say-it-better' | 'etiquette' | 'vocabulary'>('say-it-better');
+export function GamesSuite({ initialGame = 'etiquette' }: { initialGame?: string }) {
+  const { isDark } = useThemeCustomizer();
+  const [activeGame, setActiveGame] = useState<string>(initialGame);
 
-  // Etiquette state
+  // Dilemma State
   const [dilemmaIdx, setDilemmaIdx] = useState(0);
-  const [selectedDilemmaChoice, setSelectedDilemmaChoice] = useState<number | null>(null);
+  const [selectedDilemmaOpt, setSelectedDilemmaOpt] = useState<number | null>(null);
 
-  // Vocabulary state
+  // Vocab State
   const [vocabIdx, setVocabIdx] = useState(0);
-  const [selectedVocabChoice, setSelectedVocabChoice] = useState<number | null>(null);
+  const [selectedVocabOpt, setSelectedVocabOpt] = useState<number | null>(null);
 
-  const activeDilemma = ETIQUETTE_DILEMMAS[dilemmaIdx];
-  const activeVocab = VOCABULARY_CHALLENGES[vocabIdx];
+  const dilemma = ETIQUETTE_DILEMMAS[dilemmaIdx];
+  const vocab = VOCABULARY_CHALLENGES[vocabIdx];
 
-  const handleDilemmaAnswer = (idx: number) => {
+  const handleSelectDilemma = (idx: number) => {
     soundEffects.playClick();
-    setSelectedDilemmaChoice(idx);
-    const opt = activeDilemma.options[idx];
-    if (opt.isCorrect) {
+    setSelectedDilemmaOpt(idx);
+    const chosen = dilemma.options[idx];
+    if (chosen.isCorrect) {
       soundEffects.playSuccess();
-      growthProgressStore.recordGamePlay('etiquette', 100, opt.xp);
+      growthProgressStore.recordGamePlay('etiquette', 100, 40);
     }
   };
 
   const nextDilemma = () => {
     soundEffects.playClick();
-    setSelectedDilemmaChoice(null);
+    setSelectedDilemmaOpt(null);
     setDilemmaIdx((dilemmaIdx + 1) % ETIQUETTE_DILEMMAS.length);
   };
 
-  const handleVocabAnswer = (idx: number) => {
+  const handleSelectVocab = (idx: number) => {
     soundEffects.playClick();
-    setSelectedVocabChoice(idx);
-    if (idx === activeVocab.correctIndex) {
+    setSelectedVocabOpt(idx);
+    const isCorrect = idx === vocab.correctIndex;
+    if (isCorrect) {
       soundEffects.playSuccess();
-      growthProgressStore.recordGamePlay('logic', 100, 25);
+      growthProgressStore.recordGamePlay('say-it-better', 100, 30);
     }
   };
 
   const nextVocab = () => {
     soundEffects.playClick();
-    setSelectedVocabChoice(null);
+    setSelectedVocabOpt(null);
     setVocabIdx((vocabIdx + 1) % VOCABULARY_CHALLENGES.length);
   };
 
   return (
-    <div className="space-y-8">
-      {/* Tab Switcher */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 w-fit mx-auto">
+    <div className="space-y-8 animate-fadeIn max-w-4xl mx-auto">
+      {/* Game Mode Tab Buttons */}
+      <div className="flex flex-wrap items-center justify-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] dark:bg-white/[0.04] light:bg-black/[0.03] border border-white/10 dark:border-white/10 light:border-black/10 w-fit mx-auto">
         <button
           onClick={() => {
             soundEffects.playClick();
-            setActiveTab('say-it-better');
+            setActiveGame('etiquette');
           }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-            activeTab === 'say-it-better'
-              ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
+          className={`py-2 px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            activeGame === 'etiquette'
+              ? isDark
+                ? 'bg-white text-black font-bold shadow-md'
+                : 'bg-black text-white font-bold shadow-md'
+              : 'text-[#737373] hover:text-white dark:hover:text-white light:hover:text-black'
           }`}
         >
-          <MessageSquare size={16} />
-          <span>Say It Better (Flagship)</span>
+          Etiquette Dilemma
         </button>
 
         <button
           onClick={() => {
             soundEffects.playClick();
-            setActiveTab('etiquette');
+            setActiveGame('vocab');
           }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-            activeTab === 'etiquette'
-              ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
+          className={`py-2 px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            activeGame === 'vocab'
+              ? isDark
+                ? 'bg-white text-black font-bold shadow-md'
+                : 'bg-black text-white font-bold shadow-md'
+              : 'text-[#737373] hover:text-white dark:hover:text-white light:hover:text-black'
           }`}
         >
-          <ShieldAlert size={16} />
-          <span>Etiquette Dilemma</span>
-        </button>
-
-        <button
-          onClick={() => {
-            soundEffects.playClick();
-            setActiveTab('vocabulary');
-          }}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all ${
-            activeTab === 'vocabulary'
-              ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <BookOpen size={16} />
-          <span>Vocabulary Precision</span>
+          Vocabulary Precision
         </button>
       </div>
 
-      {/* Tab 1: Say It Better */}
-      {activeTab === 'say-it-better' && (
-        <div className="animate-fadeIn">
-          <SayItBetterGame />
-        </div>
-      )}
-
-      {/* Tab 2: Etiquette Dilemma */}
-      {activeTab === 'etiquette' && (
-        <div className="glass-card rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fadeIn max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+      {/* GAME 1: ETIQUETTE DILEMMA */}
+      {activeGame === 'etiquette' && (
+        <div className="mono-card p-6 sm:p-12 space-y-8 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                Category: {activeDilemma.category}
-              </span>
-              <h3 className="text-lg sm:text-xl font-bold text-white font-display">
-                What Would You Do?
+              <div className="editorial-eyebrow">
+                DILEMMA 0{dilemmaIdx + 1} OF {ETIQUETTE_DILEMMAS.length} {'//'} HIGH FRICTION
+              </div>
+              <h3 className="font-display font-bold text-xl sm:text-2xl text-inherit mt-1">
+                {dilemma.category}
               </h3>
             </div>
+
             <button
               onClick={nextDilemma}
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+              className="text-xs font-mono font-semibold text-[#737373] hover:text-white flex items-center gap-1.5 self-start sm:self-auto"
             >
               <span>Next Dilemma</span>
               <ArrowRight size={14} />
             </button>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-sm text-slate-200 leading-relaxed mb-6">
-            {activeDilemma.situation}
+          <div className="p-5 rounded-2xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02]">
+            <p className="text-xs sm:text-sm text-inherit leading-relaxed">
+              {dilemma.situation}
+            </p>
           </div>
 
-          <div className="space-y-3 mb-6">
-            {activeDilemma.options.map((opt, i) => {
-              const isSelected = selectedDilemmaChoice === i;
+          <div className="space-y-3">
+            {dilemma.options.map((opt, idx) => {
+              const isSelected = selectedDilemmaOpt === idx;
               return (
                 <button
-                  key={i}
-                  onClick={() => handleDilemmaAnswer(i)}
-                  className={`w-full text-left p-4 rounded-2xl border transition-all text-xs sm:text-sm ${
+                  key={idx}
+                  onClick={() => handleSelectDilemma(idx)}
+                  className={`w-full text-left p-4 sm:p-5 rounded-xl border transition-all flex items-start gap-4 ${
                     isSelected
-                      ? opt.isCorrect
-                        ? 'border-emerald-400 bg-emerald-500/15 text-white'
-                        : 'border-rose-400 bg-rose-500/15 text-white'
-                      : 'border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20'
+                      ? isDark
+                        ? 'bg-white text-black font-semibold border-white shadow-md'
+                        : 'bg-black text-white font-semibold border-black shadow-md'
+                      : 'bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02] border-white/10 dark:border-white/10 light:border-black/10 text-inherit hover:border-white/25'
                   }`}
                 >
-                  <div className="leading-relaxed">{opt.text}</div>
+                  <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 text-xs font-mono font-bold ${
+                    isSelected
+                      ? isDark ? 'border-black bg-black text-white' : 'border-white bg-white text-black'
+                      : 'border-current/30 text-inherit'
+                  }`}>
+                    {isSelected ? '✓' : ''}
+                  </div>
+                  <div className="text-xs sm:text-sm leading-relaxed">
+                    {opt.text}
+                  </div>
                 </button>
               );
             })}
           </div>
 
-          {selectedDilemmaChoice !== null && (
-            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 animate-fadeIn text-xs leading-relaxed text-slate-200">
-              <strong className={activeDilemma.options[selectedDilemmaChoice].isCorrect ? 'text-emerald-400' : 'text-rose-400'}>
-                {activeDilemma.options[selectedDilemmaChoice].isCorrect ? '✅ Excellent Decision:' : '⚠️ Consider Alternative:'}
-              </strong>{' '}
-              {activeDilemma.options[selectedDilemmaChoice].explanation}
+          {selectedDilemmaOpt !== null && (
+            <div className="p-6 rounded-2xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.03] dark:bg-white/[0.03] light:bg-black/[0.02] space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 dark:border-white/10 light:border-black/10">
+                <span className="mono-badge text-xs py-0.5 px-2.5">
+                  {dilemma.options[selectedDilemmaOpt].isCorrect ? 'Diplomatic & Correct' : 'Sub-optimal Response'}
+                </span>
+                <span className="text-xs font-mono text-[#737373]">
+                  +{dilemma.options[selectedDilemmaOpt].isCorrect ? '40' : '10'} XP
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-inherit leading-relaxed">
+                {dilemma.options[selectedDilemmaOpt].explanation}
+              </p>
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={nextDilemma}
+                  className="btn btn-primary text-xs py-2 px-5 font-bold inline-flex items-center gap-1.5"
+                >
+                  <span>Next Dilemma</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab 3: Vocabulary Precision */}
-      {activeTab === 'vocabulary' && (
-        <div className="glass-card rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl animate-fadeIn max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+      {/* GAME 2: VOCABULARY PRECISION */}
+      {activeGame === 'vocab' && (
+        <div className="mono-card p-6 sm:p-12 space-y-8 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block mb-1">
-                Executive Phrasing Challenge
-              </span>
-              <h3 className="text-lg sm:text-xl font-bold text-white font-display">
-                Replace Informal Jargon
+              <div className="editorial-eyebrow">
+                PRECISION ROUND 0{vocabIdx + 1} OF {VOCABULARY_CHALLENGES.length}
+              </div>
+              <h3 className="font-display font-bold text-xl sm:text-2xl text-inherit mt-1">
+                &ldquo;{vocab.informalPhrase}&rdquo;
               </h3>
             </div>
+
             <button
               onClick={nextVocab}
-              className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+              className="text-xs font-mono font-semibold text-[#737373] hover:text-white flex items-center gap-1.5 self-start sm:self-auto"
             >
-              <span>Next Word</span>
+              <span>Next Term</span>
               <ArrowRight size={14} />
             </button>
           </div>
 
-          <div className="mb-6">
-            <span className="text-xs text-slate-400 block mb-1">How would you say:</span>
-            <div className="text-2xl font-bold text-white font-display p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-              &ldquo;{activeVocab.informalPhrase}&rdquo;
+          <div className="space-y-3">
+            <div className="text-xs font-mono text-[#737373]">
+              Choose the most impactful executive precision alternative:
+            </div>
+            <div className="space-y-3">
+              {vocab.options.map((optionText, idx) => {
+                const isSelected = selectedVocabOpt === idx;
+                const isCorrect = idx === vocab.correctIndex;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectVocab(idx)}
+                    className={`w-full text-left p-4 sm:p-5 rounded-xl border transition-all flex items-start gap-4 ${
+                      isSelected
+                        ? isDark
+                          ? 'bg-white text-black font-semibold border-white shadow-md'
+                          : 'bg-black text-white font-semibold border-black shadow-md'
+                        : 'bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02] border-white/10 dark:border-white/10 light:border-black/10 text-inherit hover:border-white/25'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 text-xs font-mono font-bold ${
+                      isSelected
+                        ? isDark ? 'border-black bg-black text-white' : 'border-white bg-white text-black'
+                        : 'border-current/30 text-inherit'
+                    }`}>
+                      {isSelected ? '✓' : ''}
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold">&ldquo;{optionText}&rdquo;</div>
+                      {isSelected && (
+                        <div className="text-xs text-[#737373] mt-1">
+                          {isCorrect ? `Optimal: "${vocab.exampleSentence}"` : `Recommended: "${vocab.executiveAlternative}"`}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="space-y-3 mb-6">
-            {activeVocab.options.map((opt, idx) => {
-              const isSelected = selectedVocabChoice === idx;
-              const isCorrect = idx === activeVocab.correctIndex;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleVocabAnswer(idx)}
-                  className={`w-full text-left p-4 rounded-2xl border transition-all text-xs sm:text-sm ${
-                    isSelected
-                      ? isCorrect
-                        ? 'border-emerald-400 bg-emerald-500/15 text-white'
-                        : 'border-rose-400 bg-rose-500/15 text-white'
-                      : 'border-white/10 bg-white/[0.02] text-slate-300 hover:border-white/20'
-                  }`}
-                >
-                  <div className="font-medium">{opt}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {selectedVocabChoice !== null && (
-            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-slate-200">
-              <strong className="text-cyan-400">Example in engineering sentence:</strong><br />
-              &ldquo;{activeVocab.exampleSentence}&rdquo;
+          {selectedVocabOpt !== null && (
+            <div className="flex items-center justify-between pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10">
+              <span className="mono-badge text-xs py-1 px-3">
+                +{selectedVocabOpt === vocab.correctIndex ? '30' : '10'} XP
+              </span>
+              <button
+                onClick={nextVocab}
+                className="btn btn-primary text-xs py-2 px-5 font-bold inline-flex items-center gap-1.5"
+              >
+                <span>Next Term</span>
+                <ArrowRight size={13} />
+              </button>
             </div>
           )}
         </div>

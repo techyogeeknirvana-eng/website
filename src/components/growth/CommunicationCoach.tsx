@@ -4,14 +4,10 @@ import React, { useState } from 'react';
 import { 
   Sparkles, 
   Send, 
-  CheckCircle2, 
-  AlertCircle, 
-  ArrowRight, 
-  Volume2, 
-  RefreshCw,
+  Check, 
+  RotateCcw,
   Lightbulb,
-  MessageSquare,
-  ShieldCheck
+  ArrowRight
 } from 'lucide-react';
 import { soundEffects } from '@/lib/audio/soundEffects';
 
@@ -30,7 +26,7 @@ const COACH_TIPS: CoachTip[] = [
     category: 'Workplace Tone',
     before: 'This code is completely broken and nothing works.',
     after: 'I have isolated an issue in the auth flow where tokens are not refreshing properly. Here is the reproduction stack trace.',
-    explanation: 'Shifting from emotional catastrophe to objective problem isolation signals technical competence.',
+    explanation: 'Shifting from emotional catastrophe to objective problem isolation signals technical maturity.',
     toneScore: 95
   },
   {
@@ -60,172 +56,164 @@ export function CommunicationCoach() {
     suggestion: string;
     rewrite: string;
   } | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
     soundEffects.playClick();
-    setIsAnalyzing(true);
+    const lower = inputText.toLowerCase();
 
-    setTimeout(() => {
-      soundEffects.playSuccess();
-      const lower = inputText.toLowerCase();
+    let tone = 'Diplomatic & Direct';
+    let clarity = 88;
+    let professionalism = 85;
+    let suggestion = 'Solid statement structure. Maintain concise phrasing.';
+    let rewrite = inputText;
 
-      let clarityScore = 82;
-      let professionalismScore = 80;
-      let tone = 'Constructive & Direct';
-      let suggestion = 'Your message is clear. To maximize professional impact, add collaborative context.';
-      let rewrite = inputText;
+    if (lower.includes('asap') || lower.includes('hurry') || lower.includes('right now') || lower.includes('fast')) {
+      tone = 'Urgent / Blunt';
+      clarity = 72;
+      professionalism = 60;
+      suggestion = 'Avoid demanding acronyms like "ASAP". State the actual constraint and request assistance politely.';
+      rewrite = `Could you please share this when you get a moment? We need it to finalize the milestone by end of day.`;
+    } else if (lower.includes('stupid') || lower.includes('broken') || lower.includes('dumb') || lower.includes('hate')) {
+      tone = 'Emotionally Charged';
+      clarity = 55;
+      professionalism = 45;
+      suggestion = 'Remove subjective frustration. Frame the technical friction objectively with logs or reproduction steps.';
+      rewrite = `I am running into unexpected behavior in this module. Could we review the test assertions together?`;
+    } else if (lower.includes('sorry') && lower.split('sorry').length > 2) {
+      tone = 'Excessively Apologetic';
+      clarity = 70;
+      professionalism = 68;
+      suggestion = 'Repeatedly apologizing reduces executive presence. Replace apologies with gratitude for cooperation.';
+      rewrite = `Thank you for your patience on this review. The updated patches are live on the branch.`;
+    } else {
+      rewrite = `Regarding our discussion: ${inputText.trim().replace(/\.$/, '')}. Please let me know your thoughts so we can align next steps.`;
+    }
 
-      if (lower.includes('asap') || lower.includes('fast') || lower.includes('hurry') || lower.includes('urgently')) {
-        professionalismScore = 65;
-        tone = 'High Urgency / Slightly Demanding';
-        suggestion = 'Direct time demands can create defensive stress. Frame urgency with polite justification.';
-        rewrite = `When you have a moment, could you please review this? We are finalizing sprint deliverables.`;
-      } else if (lower.includes('wrong') || lower.includes('bad') || lower.includes('ugly') || lower.includes('garbage')) {
-        professionalismScore = 45;
-        tone = 'Confrontational / Critical';
-        suggestion = 'Avoid harsh adjectives. Anchor feedback in objective technical standards and specific suggestions.';
-        rewrite = `I noticed an opportunity to optimize this flow. Could we explore refactoring the logic together?`;
-      } else if (lower.includes('bro') || lower.includes('dude') || lower.includes('hey man')) {
-        professionalismScore = 70;
-        tone = 'Casual / Peer Level';
-        suggestion = 'Warm, but may undermine credibility in external or formal settings. Consider professional greetings.';
-        rewrite = `Hi [Name], hope you are doing well. Reaching out regarding our project milestones.`;
-      } else {
-        clarityScore = 94;
-        professionalismScore = 96;
-        tone = 'Polished & Collaborative';
-        suggestion = 'Excellent executive presence! Clear, courteous, and actionable.';
-        rewrite = `Hi [Name], could we review this update at your convenience? Appreciate your guidance on this.`;
-      }
-
-      setAnalysis({
-        tone,
-        clarityScore,
-        professionalismScore,
-        suggestion,
-        rewrite
-      });
-      setIsAnalyzing(false);
-    }, 600);
+    setAnalysis({
+      tone,
+      clarityScore: clarity,
+      professionalismScore: professionalism,
+      suggestion,
+      rewrite
+    });
   };
 
   return (
-    <div className="glass-card rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-lg shadow-cyan-500/20">
-          <Sparkles size={22} />
+    <div className="mono-card p-6 sm:p-12 space-y-10 animate-fadeIn max-w-4xl mx-auto">
+      <div className="space-y-3">
+        <div className="editorial-eyebrow">
+          EXECUTIVE PHRASE ARCHITECT // TONE ANALYZER
         </div>
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 block">
-            Interactive Assistant
-          </span>
-          <h3 className="text-xl sm:text-2xl font-bold text-white font-display">
-            TYGN Communication Coach
-          </h3>
-        </div>
+        <h3 className="editorial-title text-2xl sm:text-4xl text-inherit">
+          Communication Coach
+        </h3>
+        <p className="text-xs sm:text-sm text-[#737373] leading-relaxed max-w-xl">
+          Paste any message you plan to send to a teammate, professor, recruiter, or manager. The engine evaluates tone, isolates friction, and generates an executive rewrite.
+        </p>
       </div>
 
-      <p className="text-xs sm:text-sm text-slate-300/80 mb-6 leading-relaxed">
-        Test your drafted Slack messages, interview answers, or emails. The coach analyzes tone, detects friction, and rewrites your communication into executive polish.
-      </p>
-
-      {/* Interactive Input Form */}
-      <form onSubmit={handleAnalyze} className="mb-8">
-        <div className="relative">
+      {/* Input Analyzer Form */}
+      <form onSubmit={handleAnalyze} className="space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-mono text-[#737373]">
+            Draft Phrase or Message:
+          </label>
           <textarea
-            rows={3}
             value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            placeholder="e.g., 'Bro send the code fast, you are delaying our submission.'"
-            className="w-full rounded-2xl bg-white/[0.04] border border-white/10 p-4 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors pr-24"
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="e.g. Send me the file ASAP, we are already late."
+            rows={3}
+            className="w-full text-xs sm:text-sm font-sans"
             required
           />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {['Send me file ASAP', 'This code makes no sense', 'Sorry for asking but'].map((sample, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setInputText(sample)}
+                className="hidden sm:inline-block text-[0.68rem] font-mono px-2 py-1 rounded border border-white/10 text-[#737373] hover:text-white"
+              >
+                Sample: &ldquo;{sample}&rdquo;
+              </button>
+            ))}
+          </div>
+
           <button
             type="submit"
-            disabled={isAnalyzing || !inputText.trim()}
-            className="absolute bottom-3 right-3 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold text-xs hover:opacity-95 shadow-md flex items-center gap-1.5 transition-all disabled:opacity-40"
+            className="btn btn-primary text-xs py-2.5 px-6 font-bold inline-flex items-center gap-2"
           >
-            {isAnalyzing ? (
-              <RefreshCw size={13} className="animate-spin" />
-            ) : (
-              <>
-                <span>Analyze</span>
-                <Send size={12} />
-              </>
-            )}
+            <span>Analyze Phrase</span>
+            <Send size={13} />
           </button>
         </div>
       </form>
 
-      {/* Live Analysis Output */}
+      {/* Analysis Output */}
       {analysis && (
-        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 mb-8 animate-fadeIn">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-white/10">
+        <div className="p-6 rounded-2xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02] space-y-6 animate-fadeIn">
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10 dark:border-white/10 light:border-black/10">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Detected Tone
-              </span>
-              <span className="text-sm font-bold text-cyan-300">{analysis.tone}</span>
+              <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Detected Tone Profile</div>
+              <div className="font-display font-bold text-lg text-inherit mt-0.5">{analysis.tone}</div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <span className="text-[10px] font-mono text-slate-400 block">Clarity</span>
-                <span className="text-sm font-bold text-white font-mono">{analysis.clarityScore}%</span>
+            <div className="flex items-center gap-6">
+              <div>
+                <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Clarity</div>
+                <div className="font-display font-black text-xl text-inherit">{analysis.clarityScore}%</div>
               </div>
-              <div className="text-center">
-                <span className="text-[10px] font-mono text-slate-400 block">Polish</span>
-                <span className="text-sm font-bold text-emerald-400 font-mono">{analysis.professionalismScore}%</span>
+              <div>
+                <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Professionalism</div>
+                <div className="font-display font-black text-xl text-inherit">{analysis.professionalismScore}%</div>
               </div>
             </div>
           </div>
 
-          <div className="mb-4">
-            <span className="text-xs font-bold text-slate-300 block mb-1">
-              Coach Assessment:
-            </span>
-            <p className="text-xs text-slate-300/90 leading-relaxed">
+          <div className="space-y-2">
+            <div className="text-xs font-mono font-bold uppercase text-[#737373]">Coach Insight</div>
+            <p className="text-xs sm:text-sm text-inherit leading-relaxed">
               {analysis.suggestion}
             </p>
           </div>
 
-          <div className="p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 block mb-1 flex items-center gap-1.5">
-              <Lightbulb size={13} /> Recommended Executive Rewrite
-            </span>
-            <p className="text-xs text-white font-medium italic">
+          <div className="p-4 rounded-xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.04] dark:bg-white/[0.04] light:bg-black/[0.02] space-y-1.5">
+            <div className="text-[0.68rem] font-mono uppercase text-inherit font-bold">
+              Executive Rewrite // Ready to Send:
+            </div>
+            <p className="text-xs sm:text-sm text-inherit italic leading-relaxed">
               &ldquo;{analysis.rewrite}&rdquo;
             </p>
           </div>
         </div>
       )}
 
-      {/* Exemplar Tips Grid */}
-      <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
-          Executive Transformation Blueprints
-        </span>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Curated Field Insights */}
+      <div className="space-y-4 pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10">
+        <div className="text-xs font-mono font-bold uppercase text-[#737373]">
+          Engineering Communication Case Studies
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {COACH_TIPS.map((tip, idx) => (
-            <div key={idx} className="p-4 rounded-2xl bg-white/[0.02] border border-white/10">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 block mb-1">
-                {tip.category}
-              </span>
-              <h5 className="text-xs font-bold text-white mb-2">{tip.title}</h5>
-              
-              <div className="text-[11px] space-y-1.5 mb-2">
-                <div className="text-rose-300 line-through opacity-75">
-                  &ldquo;{tip.before}&rdquo;
-                </div>
-                <div className="text-emerald-300 font-medium">
-                  &ldquo;{tip.after}&rdquo;
-                </div>
+            <div
+              key={idx}
+              className="p-5 rounded-2xl border border-white/10 dark:border-white/10 light:border-black/10 bg-white/[0.02] dark:bg-white/[0.02] light:bg-black/[0.02] space-y-3 flex flex-col justify-between"
+            >
+              <div className="space-y-2">
+                <span className="text-[0.65rem] font-mono uppercase text-[#737373]">{tip.category}</span>
+                <h4 className="font-display font-bold text-xs sm:text-sm text-inherit">{tip.title}</h4>
+                <div className="text-[0.72rem] text-[#737373] line-through">&ldquo;{tip.before}&rdquo;</div>
+                <div className="text-[0.75rem] text-inherit font-medium">&ldquo;{tip.after}&rdquo;</div>
               </div>
-              <p className="text-[10px] text-slate-400 leading-snug">{tip.explanation}</p>
+              <p className="text-[0.7rem] text-[#737373] pt-2 border-t border-white/10 dark:border-white/10 light:border-black/10 leading-relaxed">
+                {tip.explanation}
+              </p>
             </div>
           ))}
         </div>

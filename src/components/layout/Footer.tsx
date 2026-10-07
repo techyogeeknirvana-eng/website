@@ -1,281 +1,186 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { 
-  Sparkles, 
-  Mail, 
-  FolderGit2, 
+  ArrowUpRight, 
   MessageCircle, 
-  Heart,
-  ExternalLink,
-  ShieldCheck
+  FolderGit2
 } from 'lucide-react';
 import { LinkedinIcon, InstagramIcon } from '@/components/common/BrandIcons';
-import { soundEffects } from '@/lib/audio/soundEffects';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 export function Footer() {
+  const { isDark } = useThemeCustomizer();
+
   return (
     <footer
+      className="border-t py-16 sm:py-24 transition-colors"
       style={{
-        borderTop: '1px solid var(--border-subtle)',
-        background: 'linear-gradient(180deg, var(--bg-secondary) 0%, #030407 100%)',
-        padding: '60px 0 30px 0',
-        marginTop: '80px',
+        background: isDark ? '#000000' : '#ffffff',
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+        color: isDark ? '#ffffff' : '#000000',
       }}
     >
       <div className="container-custom">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '40px',
-            marginBottom: '50px',
-          }}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 sm:gap-16 pb-16 border-b"
+          style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }}
         >
           {/* Brand Col */}
-          <div style={{ maxWidth: '340px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--gradient-nirvana)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 0 12px rgba(99, 102, 241, 0.4)',
-                }}
+          <div className="md:col-span-1 space-y-4">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-7 h-7 rounded-full border flex items-center justify-center p-0.5"
+                style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)' }}
               >
-                <Sparkles size={20} color="#fff" />
+                <img
+                  src="/assets/tygn-logo.png"
+                  alt="TYGN"
+                  className="w-full h-full object-contain invert dark:invert-0"
+                />
               </div>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                TECHYOGEEK <span className="text-gradient">NIRVANA</span>
+              <span className="font-display font-black text-lg tracking-tight">
+                TYGN NIRVANA
               </span>
             </div>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '20px' }}>
-              &ldquo;Where Tech Minds Connect, Create & Grow.&rdquo; An AI-powered technology community for learning, opportunities, collaboration and innovation.
+            <p className="text-xs sm:text-sm text-[#737373] leading-relaxed max-w-xs">
+              A student-led technology ecosystem where students discover opportunities, build real projects, and develop professional presence beyond the classroom.
             </p>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="pt-2 flex items-center gap-3">
               <a
                 href="https://www.linkedin.com/in/techyogeek-nirvana-834b92309/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-ghost"
+                className="p-2 rounded-full border hover:bg-white/10 transition-colors"
+                style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)' }}
                 title="LinkedIn"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
               >
-                <LinkedinIcon size={17} color="#0ea5e9" />
+                <LinkedinIcon size={14} color="currentColor" />
               </a>
               <a
                 href="https://chat.whatsapp.com/KFUYpSAMVOr0TtuUWqSBpZ"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-ghost"
+                className="p-2 rounded-full border hover:bg-white/10 transition-colors"
+                style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)' }}
                 title="WhatsApp Community"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
               >
-                <MessageCircle size={17} style={{ color: '#22c55e' }} />
+                <MessageCircle size={14} />
               </a>
               <a
                 href="https://www.instagram.com/techyogeek.nirvana"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-ghost"
+                className="p-2 rounded-full border hover:bg-white/10 transition-colors"
+                style={{ borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)' }}
                 title="Instagram"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
               >
-                <InstagramIcon size={17} color="#ec4899" />
-              </a>
-              <a
-                href="mailto:techyogeeknirvana@gmail.com"
-                className="btn-ghost"
-                title="Email Us"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Mail size={17} style={{ color: 'var(--accent-amber)' }} />
+                <InstagramIcon size={14} color="currentColor" />
               </a>
             </div>
           </div>
 
-          {/* Platform Navigation */}
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-              Platform Hubs
-            </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.86rem' }}>
-              <li>
-                <a href="/growth" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', color: '#10b981', fontWeight: 600 }}>
-                  Growth Hub (Verbal Manners & Etiquette)
-                </a>
-              </li>
-              <li>
-                <a href="/games" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', color: 'var(--accent-purple)', fontWeight: 600 }}>
-                  Games Arena (Say It Better)
-                </a>
-              </li>
-              <li>
-                <a href="/community" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Discord-style Community
-                </a>
-              </li>
-              <li>
-                <a href="/opportunities" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Jobs & Internships Marketplace
-                </a>
-              </li>
-              <li>
-                <a href="/events" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Hackathons & Tech Events
-                </a>
-              </li>
-              <li>
-                <a href="/live" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Nirvana Live (Interactive Quizzes)
-                </a>
-              </li>
-              <li>
-                <a href="/projects" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Project Showcase Hub
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* AI Tools */}
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
-              AI Suite
-            </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.86rem' }}>
-              <li>
-                <a href="/resume-lab" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  AI Resume Lab (ATS Score)
-                </a>
-              </li>
-              <li>
-                <a href="/ai-interview" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  AI Interview Room
-                </a>
-              </li>
-              <li>
-                <a href="/ai-code" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  AI Code Explainer & Complexity
-                </a>
-              </li>
-              <li>
-                <a href="/live/create" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  AI Presentation Generator
-                </a>
-              </li>
-              <li>
-                <a href="/roadmaps" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Personalized Tech Roadmaps
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Unique Features & Resources */}
-          <div>
-            <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px' }}>
+          {/* Navigation Links */}
+          <div className="space-y-4">
+            <div className="text-xs font-bold uppercase tracking-widest text-[#737373]">
               Ecosystem
             </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.86rem' }}>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
               <li>
-                <a href="/about" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-                  About TYGN (Our Story)
-                </a>
+                <Link href="/" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Home
+                </Link>
               </li>
               <li>
-                <a href="/moments" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Nirvana Moments (Milestones)
-                </a>
+                <Link href="/about" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  About TYGN
+                </Link>
               </li>
               <li>
-                <a href="/tech-radar" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Interactive Tech Radar 2026
-                </a>
+                <Link href="/events" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Tech Events &amp; Summits
+                </Link>
               </li>
               <li>
-                <a href="/collab-finder" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
-                  Collab Finder (Teammates)
-                </a>
+                <Link href="/opportunities" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Internships &amp; Jobs
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Growth & Training */}
+          <div className="space-y-4">
+            <div className="text-xs font-bold uppercase tracking-widest text-[#737373]">
+              Personal Growth
+            </div>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li>
+                <Link href="/growth" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Growth Hub Overview
+                </Link>
+              </li>
+              <li>
+                <Link href="/growth#quiz" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  10-Q Communication Diagnostic
+                </Link>
+              </li>
+              <li>
+                <Link href="/games" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Games Arena (Say It Better)
+                </Link>
+              </li>
+              <li>
+                <Link href="/growth#simulator" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Conversation Simulator
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Academic & Resources */}
+          <div className="space-y-4">
+            <div className="text-xs font-bold uppercase tracking-widest text-[#737373]">
+              Academic Drive
+            </div>
+            <ul className="space-y-2.5 text-xs sm:text-sm">
+              <li>
+                <Link href="/notes" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  B.Tech Notes Drive
+                </Link>
+              </li>
+              <li>
+                <Link href="/roadmaps" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Engineering Skill Trees
+                </Link>
+              </li>
+              <li>
+                <Link href="/tech-radar" className="text-[#a3a3a3] hover:text-white transition-colors no-underline">
+                  Tech Radar 2026
+                </Link>
               </li>
               <li>
                 <a
                   href="https://drive.google.com/drive/folders/1-tXGUSeXXurQkyU7jxzJGuDEdQK9C1bG"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-ghost"
-                  style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  className="text-[#a3a3a3] hover:text-white transition-colors no-underline inline-flex items-center gap-1.5"
                 >
-                  <FolderGit2 size={15} style={{ color: 'var(--accent-cyan)' }} />
-                  Google Drive Resources <ExternalLink size={12} />
-                </a>
-              </li>
-              <li>
-                <a href="/admin" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <ShieldCheck size={15} style={{ color: 'var(--accent-rose)' }} />
-                  Admin Moderation Portal
+                  <FolderGit2 size={13} /> Official Drive Archive <ArrowUpRight size={11} />
                 </a>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div
-          style={{
-            paddingTop: '24px',
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)',
-          }}
-        >
+        {/* Bottom Metadata */}
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#737373]">
           <div>
-            © {new Date().getFullYear()} Techyogeek Nirvana. Connect. Create. Learn. Grow. All rights reserved.
+            © {new Date().getFullYear()} TechYOGeek Nirvana. All rights reserved.
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            Built for developers & students with{' '}
-            <Heart size={14} style={{ color: 'var(--accent-rose)', fill: 'var(--accent-rose)' }} />
+          <div className="flex items-center gap-6">
+            <span>Learn. Build. Compete. Connect. Grow.</span>
+            <span className="font-mono">TYGN v2.0 Monochrome</span>
           </div>
         </div>
       </div>
