@@ -40,7 +40,7 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { isAdmin } = useAuth();
+  const { isAuthenticated, currentUser, isAdmin } = useAuth();
   const { isDark, setIsCustomizerOpen } = useThemeCustomizer();
 
   // Listen for Cmd+K or Ctrl+K
@@ -67,12 +67,17 @@ export function CommandPalette() {
   }, [isOpen]);
 
   // Build searchable catalogue
-  const opportunities = dbStore.getOpportunities();
-  const events = dbStore.getEvents();
-  const quizzes = dbStore.getQuizzes();
-  const roadmaps = dbStore.getLearningPaths();
+  const publicItems: SearchItem[] = [
+    { id: 'pub_home', title: 'Home — Student Technology Ecosystem', category: 'Public', type: 'navigation', url: '/', icon: <Sparkles size={16} /> },
+    { id: 'pub_about', title: 'About TYGN & Founding Story', category: 'Public', type: 'navigation', url: '/about', icon: <Compass size={16} /> },
+    { id: 'pub_login', title: 'Sign In / Get Started with Google', category: 'Authentication', type: 'action', url: '/login', icon: <CheckCircle2 size={16} /> },
+    { id: 'pub_customize', title: 'Customize Experience (Theme, Typography)', category: 'Preferences', type: 'action', url: '#customize', icon: <Sliders size={16} /> },
+  ];
 
-  const baseItems: SearchItem[] = [
+  const opportunities = isAuthenticated ? dbStore.getOpportunities() : [];
+  const events = isAuthenticated ? dbStore.getEvents() : [];
+
+  const authenticatedBaseItems: SearchItem[] = [
     { id: 'act_growth', title: 'Launch Growth Hub & Verbal Manners Coach', category: 'Personal Growth', type: 'action', url: '/growth', icon: <Sparkles size={16} /> },
     { id: 'act_quiz_diagnostic', title: 'Take 10-Q Verbal Manners Diagnostic', category: 'Personal Growth', type: 'action', url: '/growth#quiz', icon: <CheckCircle2 size={16} /> },
     { id: 'act_game_say_better', title: 'Play "Say It Better" Communication Game', category: 'Games Arena', type: 'action', url: '/games', icon: <Gamepad2 size={16} /> },
@@ -107,10 +112,12 @@ export function CommandPalette() {
     icon: <Calendar size={16} />
   }));
 
-  const allItems = [...baseItems, ...oppItems, ...eventItems];
+  const allItems = isAuthenticated 
+    ? [...authenticatedBaseItems, ...oppItems, ...eventItems]
+    : publicItems;
 
   const filteredItems = query.trim() === ''
-    ? baseItems
+    ? allItems.slice(0, 8)
     : allItems.filter(item => 
         item.title.toLowerCase().includes(query.toLowerCase()) || 
         item.category.toLowerCase().includes(query.toLowerCase())

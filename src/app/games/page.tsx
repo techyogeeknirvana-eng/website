@@ -17,6 +17,7 @@ import { SayItBetterGame } from '@/components/games/SayItBetterGame';
 import { GamesSuite } from '@/components/games/GamesSuite';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface GameItem {
   id: string;
@@ -97,7 +98,8 @@ export default function GamesPage() {
   };
 
   return (
-    <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-16 sm:space-y-24">
+    <ProtectedRoute>
+      <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-16 sm:space-y-24">
       {/* 1. HERO (Item 50) */}
       <section className="text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 dark:border-white/10 light:border-black/10 text-xs font-semibold uppercase tracking-widest text-[#737373]">
@@ -255,5 +257,6 @@ export default function GamesPage() {
         )}
       </section>
     </div>
+  </ProtectedRoute>
   );
 }

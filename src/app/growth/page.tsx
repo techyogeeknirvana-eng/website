@@ -21,6 +21,7 @@ import { SkillRadar } from '@/components/growth/SkillRadar';
 import { growthProgressStore } from '@/lib/growth/progressStore';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 export default function GrowthHubPage() {
   const { isDark } = useThemeCustomizer();
@@ -50,7 +51,8 @@ export default function GrowthHubPage() {
   };
 
   return (
-    <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-16 sm:space-y-24">
+    <ProtectedRoute>
+      <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-16 sm:space-y-24">
       {/* 1. GROWTH HUB HERO */}
       <section className="text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 dark:border-white/10 light:border-black/10 text-xs font-semibold uppercase tracking-widest text-[#737373]">
@@ -178,5 +180,6 @@ export default function GrowthHubPage() {
         </div>
       </section>
     </div>
+  </ProtectedRoute>
   );
 }

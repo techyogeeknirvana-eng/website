@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Search, 
   X, 
@@ -10,29 +10,37 @@ import {
   Sliders, 
   Sun, 
   Moon, 
-  CheckCircle2, 
   Shield, 
   LogOut, 
-  UserCheck, 
   LayoutDashboard,
   BookOpen,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Zap,
+  User,
+  Settings,
+  HelpCircle,
+  FolderGit2,
+  Gamepad2,
+  Briefcase
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { SoundToggle } from '@/components/common/SoundToggle';
 import { GoogleIcon } from '@/components/auth/GoogleAuthModal';
+import { PublicFeaturesModal } from '@/components/layout/PublicFeaturesModal';
 
 export function Navbar() {
+  const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, isAuthenticated, isAdmin, openGoogleModal, signInWithGoogle, logout } = useAuth();
+  const { currentUser, isAuthenticated, isAdmin, wallet, logout } = useAuth();
   const { isDark, toggleTheme, setIsCustomizerOpen } = useThemeCustomizer();
   
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isFeaturesModalOpen, setIsFeaturesModalOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,14 +60,30 @@ export function Navbar() {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   };
 
-  const navLinks = [
-    { label: 'Home', href: '/' },
+  const handleSignOut = async () => {
+    soundEffects.playClick();
+    setUserDropdownOpen(false);
+    await logout();
+    router.replace('/');
+  };
+
+  // Dual-state navigation links
+  const publicNavLinks = [
     { label: 'About', href: '/about' },
+    { label: 'How It Works', href: '/#story' },
+  ];
+
+  const authenticatedNavLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Notes', href: '/notes' },
     { label: 'Events', href: '/events' },
+    { label: 'Opportunities', href: '/opportunities' },
     { label: 'Growth Hub', href: '/growth' },
     { label: 'Games Arena', href: '/games' },
-    { label: 'Opportunities', href: '/opportunities' },
   ];
+
+  const navLinks = (isAuthenticated && currentUser) ? authenticatedNavLinks : publicNavLinks;
 
   return (
     <>
@@ -77,7 +101,9 @@ export function Navbar() {
           }`}
           style={{
             background: isDark ? 'rgba(5, 5, 5, 0.82)' : 'rgba(255, 255, 255, 0.88)',
-            borderColor: isDark ? (scrolled ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)') : (scrolled ? 'rgba(0, 0, 0, 0.14)' : 'rgba(0, 0, 0, 0.06)'),
+            borderColor: isDark 
+              ? (scrolled ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)') 
+              : (scrolled ? 'rgba(0, 0, 0, 0.14)' : 'rgba(0, 0, 0, 0.06)'),
             color: isDark ? '#ffffff' : '#000000',
           }}
         >
@@ -133,23 +159,58 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Public Features Drawer Trigger (Only shown before sign-in) */}
+            {!isAuthenticated && (
+              <button
+                onClick={() => {
+                  soundEffects.playClick();
+                  setIsFeaturesModalOpen(true);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isDark
+                    ? 'text-[#d4d4d4] hover:text-white hover:bg-white/5'
+                    : 'text-[#404040] hover:text-black hover:bg-black/5'
+                }`}
+              >
+                Features
+              </button>
+            )}
           </nav>
 
           {/* Right Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Command Palette Trigger */}
-            <button
-              onClick={handleOpenSearch}
-              title="Search commands (Cmd+K)"
-              className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs text-[#a3a3a3] hover:text-white transition-colors"
-              style={{
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
-              }}
-            >
-              <Search size={13} />
-              <span className="text-[0.7rem] font-mono opacity-60">⌘K</span>
-            </button>
+            {/* Authenticated Controls: Search & Credits (Never shown before login) */}
+            {isAuthenticated && currentUser && (
+              <>
+                {/* Search Trigger */}
+                <button
+                  onClick={handleOpenSearch}
+                  title="Search commands (Cmd+K)"
+                  className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs text-[#a3a3a3] hover:text-white transition-colors"
+                  style={{
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                    background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+                  }}
+                >
+                  <Search size={13} />
+                  <span className="text-[0.7rem] font-mono opacity-60">⌘K</span>
+                </button>
+
+                {/* Credits Badge (Isolated to authenticated user) */}
+                <div 
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-bold"
+                  style={{
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
+                    background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+                  }}
+                  title="Your Available Credits"
+                >
+                  <Zap size={12} className="text-inherit" />
+                  <span>{wallet?.totalCredits ?? currentUser.xp ?? 10}</span>
+                </div>
+              </>
+            )}
 
             {/* Customizer Drawer Trigger */}
             <button
@@ -190,22 +251,36 @@ export function Navbar() {
               {isDark ? <Sun size={14} /> : <Moon size={14} />}
             </button>
 
-            {/* Auth CTA or User Profile */}
+            {/* AUTH ACTIONS: Public (Sign In / Get Started) vs Authenticated (Profile Dropdown) */}
             {!isAuthenticated || !currentUser ? (
-              <button
-                onClick={() => signInWithGoogle()}
-                className="btn btn-primary text-xs py-1.5 px-3.5 sm:px-4 rounded-full font-bold flex items-center gap-2"
-              >
-                <div className="w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0">
-                  <GoogleIcon size={10} />
-                </div>
-                <span>Join</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  onClick={() => soundEffects.playClick()}
+                  className="hidden sm:inline-flex px-3.5 py-1.5 text-xs font-semibold hover:opacity-80 transition-opacity no-underline text-inherit"
+                >
+                  Sign In
+                </Link>
+
+                <Link
+                  href="/login"
+                  onClick={() => soundEffects.playClick()}
+                  className="btn btn-primary text-xs py-1.5 px-4 rounded-full font-bold flex items-center gap-2 no-underline"
+                >
+                  <div className="w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0">
+                    <GoogleIcon size={10} />
+                  </div>
+                  <span>Get Started</span>
+                </Link>
+              </div>
             ) : (
               <div className="relative">
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 rounded-full p-0.5 border"
+                  onClick={() => {
+                    soundEffects.playClick();
+                    setUserDropdownOpen(!userDropdownOpen);
+                  }}
+                  className="flex items-center gap-2 rounded-full p-0.5 border transition-transform hover:scale-105"
                   style={{
                     borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
                   }}
@@ -217,7 +292,7 @@ export function Navbar() {
                   />
                 </button>
 
-                {/* Dropdown Menu */}
+                {/* Authenticated Dropdown Menu */}
                 {userDropdownOpen && (
                   <>
                     <div
@@ -254,32 +329,53 @@ export function Navbar() {
                       </Link>
 
                       <Link
+                        href="/profile"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
+                      >
+                        <User size={14} /> Profile
+                      </Link>
+
+                      <Link
                         href="/notes"
                         onClick={() => setUserDropdownOpen(false)}
                         className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
                       >
-                        <BookOpen size={14} /> Notes Drive
+                        <FolderGit2 size={14} /> Notes &amp; Drive
+                      </Link>
+
+                      <Link
+                        href="/growth"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
+                      >
+                        <Sparkles size={14} /> Growth Hub
+                      </Link>
+
+                      <Link
+                        href="/games"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline text-inherit"
+                      >
+                        <Gamepad2 size={14} /> Games Arena
                       </Link>
 
                       {isAdmin && (
                         <Link
                           href="/admin"
                           onClick={() => setUserDropdownOpen(false)}
-                          className="flex items-center gap-2 p-2 rounded-lg text-xs font-semibold hover:bg-white/10 text-inherit no-underline"
+                          className="flex items-center gap-2 p-2 rounded-lg text-xs font-bold text-inherit hover:bg-white/10 dark:hover:bg-white/10 light:hover:bg-black/5 no-underline"
                         >
-                          <Shield size={14} /> Admin Portal
+                          <Shield size={14} /> Admin Console
                         </Link>
                       )}
 
-                      <div className="border-t border-white/10 dark:border-white/10 light:border-black/10 pt-1 mt-1">
+                      <div className="pt-1 border-t border-white/10 dark:border-white/10 light:border-black/10">
                         <button
-                          onClick={() => {
-                            setUserDropdownOpen(false);
-                            logout();
-                          }}
-                          className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-xs font-semibold text-[#737373] hover:text-white transition-colors"
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-2 p-2 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors text-left"
                         >
-                          <LogOut size={13} /> Sign Out
+                          <LogOut size={14} /> Sign out
                         </button>
                       </div>
                     </div>
@@ -288,17 +384,16 @@ export function Navbar() {
               </div>
             )}
 
-            {/* Mobile Hamburger Toggle */}
+            {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => {
                 soundEffects.playClick();
                 setMobileMenuOpen(!mobileMenuOpen);
               }}
-              className="lg:hidden p-2 rounded-full border"
+              className="lg:hidden p-2 rounded-full border text-inherit"
               style={{
                 borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)',
                 background: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
-                color: 'inherit',
               }}
             >
               {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
@@ -307,69 +402,78 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Fullscreen Mobile Navigation Drawer */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40 flex flex-col justify-between p-8 pt-28 animate-fadeIn"
-          style={{
-            background: isDark ? '#000000' : '#ffffff',
-            color: isDark ? '#ffffff' : '#000000',
-          }}
-        >
-          <div className="space-y-6">
-            <div className="text-xs font-bold uppercase tracking-widest text-[#737373]">
-              Navigation
+        <div className="fixed inset-0 z-40 lg:hidden bg-black/95 backdrop-blur-2xl p-6 pt-28 flex flex-col justify-between animate-fadeIn text-white">
+          <div className="space-y-4">
+            <div className="editorial-eyebrow pb-2 border-b border-white/10">
+              {isAuthenticated ? 'PLATFORM NAVIGATION' : 'PUBLIC EXPERIENCE'}
             </div>
-            <nav className="flex flex-col space-y-4">
-              {navLinks.map((link, idx) => (
+
+            <div className="flex flex-col space-y-2">
+              {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="font-display text-2xl sm:text-3xl font-black text-inherit no-underline hover:opacity-70 transition-opacity flex items-center justify-between"
+                  className="font-display font-bold text-xl py-2 text-white no-underline hover:opacity-70 transition-opacity"
                 >
-                  <span>{link.label}</span>
-                  <span className="text-xs font-mono text-[#737373]">0{idx + 1}</span>
+                  {link.label}
                 </Link>
               ))}
-            </nav>
+
+              {!isAuthenticated && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsFeaturesModalOpen(true);
+                  }}
+                  className="font-display font-bold text-xl py-2 text-white text-left hover:opacity-70 transition-opacity"
+                >
+                  Features
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="pt-8 border-t border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-between">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setIsCustomizerOpen(true);
-              }}
-              className="flex items-center gap-2 text-xs font-bold text-[#737373] hover:text-white"
-            >
-              <Sliders size={14} /> Customize TYGN
-            </button>
-
+          <div className="space-y-3 pt-6 border-t border-white/10">
             {!isAuthenticated ? (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  signInWithGoogle();
-                }}
-                className="btn btn-primary text-xs py-2 px-5"
-              >
-                Sign In
-              </button>
+              <div className="space-y-2">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-primary w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                >
+                  <GoogleIcon size={16} />
+                  <span>Get Started with Google</span>
+                </Link>
+
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-secondary w-full py-3 rounded-xl font-bold text-center block"
+                >
+                  Sign In
+                </Link>
+              </div>
             ) : (
               <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout();
-                }}
-                className="text-xs font-bold text-[#737373]"
+                onClick={handleSignOut}
+                className="btn btn-secondary w-full py-3 rounded-xl font-bold text-red-400 flex items-center justify-center gap-2"
               >
-                Sign Out
+                <LogOut size={16} />
+                <span>Sign Out</span>
               </button>
             )}
           </div>
         </div>
       )}
+
+      {/* Public Features Modal */}
+      <PublicFeaturesModal
+        isOpen={isFeaturesModalOpen}
+        onClose={() => setIsFeaturesModalOpen(false)}
+      />
     </>
   );
 }

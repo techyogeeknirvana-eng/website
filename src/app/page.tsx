@@ -10,7 +10,8 @@ import {
   Gamepad2, 
   ArrowUpRight,
   ShieldCheck,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 import { HeroSection } from '@/components/home/HeroSection';
 import { WhatIsTYGN } from '@/components/home/WhatIsTYGN';
@@ -86,11 +87,11 @@ export default function HomePage() {
                     {evt.participantsCount} Registered
                   </span>
                   <Link
-                    href={`/events?id=${evt.id}`}
+                    href={isAuthenticated ? `/events?id=${evt.id}` : `/login?redirect=${encodeURIComponent(`/events?id=${evt.id}`)}`}
                     onClick={() => soundEffects.playClick()}
                     className="btn btn-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 no-underline text-inherit"
                   >
-                    <span>Details</span>
+                    <span>{isAuthenticated ? 'Details' : 'Sign in to register'}</span>
                     <ArrowRight size={12} />
                   </Link>
                 </div>
@@ -153,11 +154,11 @@ export default function HomePage() {
                     Verified
                   </span>
                   <Link
-                    href={`/opportunities?id=${opp.id}`}
+                    href={isAuthenticated ? `/opportunities?id=${opp.id}` : `/login?redirect=${encodeURIComponent(`/opportunities?id=${opp.id}`)}`}
                     onClick={() => soundEffects.playClick()}
                     className="btn btn-outline text-xs py-1.5 px-3.5 inline-flex items-center gap-1.5 no-underline text-inherit"
                   >
-                    <span>Apply Now</span>
+                    <span>{isAuthenticated ? 'Apply Now' : 'Sign in to apply'}</span>
                     <ArrowUpRight size={12} />
                   </Link>
                 </div>
@@ -184,11 +185,12 @@ export default function HomePage() {
             </div>
 
             <Link
-              href="/growth"
+              href={isAuthenticated ? '/growth' : '/login?redirect=/growth'}
               onClick={() => soundEffects.playClick()}
-              className="btn btn-primary text-xs sm:text-sm py-3 px-6 shrink-0"
+              className="btn btn-primary text-xs sm:text-sm py-3 px-6 shrink-0 inline-flex items-center gap-2"
             >
-              <span>Enter Growth Hub</span>
+              {!isAuthenticated && <Lock size={14} />}
+              <span>{isAuthenticated ? 'Enter Growth Hub' : 'Sign in to unlock Growth Hub'}</span>
               <ArrowRight size={14} />
             </Link>
           </div>
@@ -235,12 +237,13 @@ export default function HomePage() {
             </div>
 
             <Link
-              href="/games"
+              href={isAuthenticated ? '/games' : '/login?redirect=/games'}
               onClick={() => soundEffects.playClick()}
-              className="btn btn-primary text-xs sm:text-sm py-3 px-6 shrink-0"
+              className="btn btn-primary text-xs sm:text-sm py-3 px-6 shrink-0 inline-flex items-center gap-2"
             >
-              <Gamepad2 size={16} />
-              <span>Launch Games Arena</span>
+              {!isAuthenticated ? <Lock size={14} /> : <Gamepad2 size={16} />}
+              <span>{isAuthenticated ? 'Launch Games Arena' : 'Sign in to play'}</span>
+              <ArrowRight size={14} />
             </Link>
           </div>
 

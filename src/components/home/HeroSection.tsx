@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { ArrowRight, Compass, Sparkles } from 'lucide-react';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { GoogleIcon } from '@/components/auth/GoogleAuthModal';
 
 export function HeroSection() {
   const { isDark } = useThemeCustomizer();
+  const { isAuthenticated, currentUser } = useAuth();
 
   const handleScrollToStory = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,23 +71,50 @@ export function HeroSection() {
 
         {/* Action CTAs */}
         <div className="pt-2 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
-          <a
-            href="#story"
-            onClick={handleScrollToStory}
-            className="btn btn-primary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-bold flex items-center justify-center gap-2"
-          >
-            <span>Explore TYGN</span>
-            <ArrowRight size={16} />
-          </a>
+          {!isAuthenticated || !currentUser ? (
+            <>
+              <Link
+                href="/login"
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-primary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-bold flex items-center justify-center gap-2.5 no-underline"
+              >
+                <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0">
+                  <GoogleIcon size={12} />
+                </div>
+                <span>Continue with Google</span>
+                <ArrowRight size={15} />
+              </Link>
 
-          <Link
-            href="/growth"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-semibold flex items-center justify-center gap-2"
-          >
-            <Sparkles size={16} />
-            <span>Enter Growth Hub</span>
-          </Link>
+              <a
+                href="#story"
+                onClick={handleScrollToStory}
+                className="btn btn-secondary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-semibold flex items-center justify-center gap-2 no-underline text-inherit"
+              >
+                <span>Explore TYGN</span>
+                <ArrowRight size={15} />
+              </a>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/dashboard"
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-primary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-bold flex items-center justify-center gap-2 no-underline"
+              >
+                <span>Go to Dashboard</span>
+                <ArrowRight size={16} />
+              </Link>
+
+              <Link
+                href="/growth"
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-secondary text-sm sm:text-base py-3 sm:py-3.5 px-8 sm:px-10 w-full sm:w-auto font-semibold flex items-center justify-center gap-2 no-underline text-inherit"
+              >
+                <Sparkles size={16} />
+                <span>Enter Growth Hub</span>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Secondary Trust Strip */}

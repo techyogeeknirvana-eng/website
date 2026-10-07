@@ -1,707 +1,285 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Sparkles, 
   Briefcase, 
   Calendar, 
-  Radio, 
-  Users, 
-  FileText, 
-  PlusCircle, 
-  CheckCircle2, 
-  Clock, 
-  Trophy, 
+  ArrowRight,
   Zap, 
   Flame, 
-  ArrowRight,
-  TrendingUp,
-  Layers,
-  Gift,
-  Copy,
+  CheckCircle2, 
+  Trophy, 
+  BookOpen, 
+  Gamepad2, 
+  FolderGit2, 
+  User, 
+  ExternalLink,
+  ShieldCheck,
   Check,
-  ExternalLink
+  Share2
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { dbStore } from '@/lib/db/store';
-import { Opportunity, CommunityEvent, Quiz } from '@/types';
+import { Opportunity, CommunityEvent } from '@/types';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { ReferralModal } from '@/components/referral/ReferralModal';
 import { SkillRadar } from '@/components/growth/SkillRadar';
 import { growthProgressStore } from '@/lib/growth/progressStore';
-import { Gamepad2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { currentUser, refreshUserData } = useAuth();
+  const { currentUser } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [events, setEvents] = useState<CommunityEvent[]>([]);
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [growthProgress, setGrowthProgress] = useState(growthProgressStore.getProgress());
 
   useEffect(() => {
     setOpportunities(dbStore.getOpportunities().slice(0, 3));
-    setEvents(dbStore.getEvents().slice(0, 2));
-    setQuizzes(dbStore.getQuizzes().slice(0, 2));
+    setEvents(dbStore.getEvents().slice(0, 3));
     setGrowthProgress(growthProgressStore.getProgress());
   }, []);
 
-  const getTimeGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  if (!currentUser) {
-    return (
-      <ProtectedRoute>
-        <div style={{ minHeight: '60vh' }} />
-      </ProtectedRoute>
-    );
-  }
+  const firstName = currentUser?.name?.split(' ')[0] || 'Student';
 
   return (
     <ProtectedRoute>
-      <div className="container-custom" style={{ padding: '40px 20px 80px 20px' }}>
-      {/* Welcome Banner */}
-      <div
-        className="glass-card glow-border"
-        style={{
-          padding: '36px',
-          marginBottom: '36px',
-          background: 'linear-gradient(135deg, rgba(13, 18, 29, 0.9), rgba(99, 102, 241, 0.15))',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '24px',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-            <span className="badge badge-cyan" style={{ fontSize: '0.75rem' }}>
-              LEVEL: {currentUser.level.toUpperCase()}
-            </span>
-            <span className="badge badge-amber" style={{ fontSize: '0.75rem' }}>
-              <Flame size={12} /> 7 DAY STREAK
-            </span>
-          </div>
-          <h1 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.5rem)', fontWeight: 800 }}>
-            {getTimeGreeting()}, {currentUser.name} 👋
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '8px', fontSize: '1rem', maxWidth: '600px' }}>
-            {currentUser.title} at {currentUser.collegeOrCompany}. AI has surfaced 4 opportunities and 2 upcoming events matching your expertise in{' '}
-            <strong style={{ color: 'var(--text-primary)' }}>{currentUser.skills.slice(0, 3).join(', ')}</strong>.
-          </p>
-        </div>
-
-        {/* User Stats Card */}
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <div
-            className="glass-card"
-            style={{
-              padding: '16px 20px',
-              textAlign: 'center',
-              minWidth: '110px',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--accent-indigo)' }}>
-              <Zap size={18} />
-              <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{currentUser.xp}</span>
+      <div className="container-custom pt-24 sm:pt-28 pb-24 space-y-12">
+        {/* Welcome Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
+          <div className="space-y-3">
+            <div className="editorial-eyebrow">
+              AUTHENTICATED WORKSPACE // {currentUser?.role === 'ADMIN' ? 'ADMINISTRATOR' : 'MEMBER'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Community XP</div>
-          </div>
-
-          <div
-            className="glass-card"
-            style={{
-              padding: '16px 20px',
-              textAlign: 'center',
-              minWidth: '110px',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--accent-amber)' }}>
-              <Trophy size={18} />
-              <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{currentUser.badges.length}</span>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Badges Earned</div>
-          </div>
-
-          <div
-            className="glass-card"
-            style={{
-              padding: '16px 20px',
-              textAlign: 'center',
-              minWidth: '110px',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--accent-cyan)' }}>
-              <Users size={18} />
-              <span style={{ fontSize: '1.4rem', fontWeight: 800 }}>{currentUser.referralCount || 0}</span>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Invites Sent</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Action Buttons */}
-      <div style={{ marginBottom: '40px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-secondary)' }}>
-          Quick Actions
-        </h3>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap: '12px',
-          }}
-        >
-          <a
-            href="/opportunities?type=internship"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <Briefcase size={16} style={{ color: 'var(--accent-cyan)' }} /> Find Internship
-          </a>
-          <a
-            href="/opportunities?type=job"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <TrendingUp size={16} style={{ color: 'var(--accent-emerald)' }} /> Find Job
-          </a>
-          <a
-            href="/live/create"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <Radio size={16} style={{ color: 'var(--accent-amber)' }} /> Create Quiz
-          </a>
-          <a
-            href="/community"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <Users size={16} style={{ color: 'var(--accent-indigo)' }} /> Community
-          </a>
-          <a
-            href="/resume-lab"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <FileText size={16} style={{ color: 'var(--accent-violet)' }} /> Check Resume
-          </a>
-          <a
-            href="/growth"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <Sparkles size={16} style={{ color: 'var(--accent-purple)' }} /> Growth Hub
-          </a>
-          <a
-            href="/games"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-secondary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <Gamepad2 size={16} style={{ color: '#10b981' }} /> Games Arena
-          </a>
-          <a
-            href="/opportunities/submit"
-            onClick={() => soundEffects.playClick()}
-            className="btn btn-primary"
-            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
-          >
-            <PlusCircle size={16} /> Post Opportunity
-          </a>
-        </div>
-      </div>
-
-      {/* Personal Growth & Skill Radar Showcase */}
-      <div
-        className="glass-card glow-border"
-        style={{
-          marginBottom: '40px',
-          padding: '32px',
-          borderRadius: '24px',
-          background: 'linear-gradient(135deg, rgba(16, 24, 40, 0.95) 0%, rgba(13, 31, 36, 0.95) 100%)',
-          border: '1px solid rgba(16, 185, 129, 0.35)',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45), 0 0 30px rgba(16, 185, 129, 0.1)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span className="badge badge-emerald" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
-                ADAPTIVE GROWTH PLATFORM
-              </span>
-              <span className="badge badge-amber" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
-                <Flame size={12} /> {growthProgress.currentStreak} DAY STREAK
-              </span>
-              <span className="badge badge-indigo" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
-                LEVEL {growthProgress.levelNumber}: {growthProgress.levelName.toUpperCase()}
-              </span>
-            </div>
-            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              Verbal Manners, Etiquette &amp; Executive Presence Radar
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '4px', maxWidth: '640px' }}>
-              Your communication intelligence profile is updated in real-time as you complete diagnostic quizzes, daily challenges, and interactive game scenarios.
+            <h1 className="editorial-title text-4xl sm:text-6xl">
+              Welcome back, {firstName}.
+            </h1>
+            <p className="text-xs sm:text-sm text-[#737373] leading-relaxed">
+              Your TYGN platform overview. Track your learning, growth score, upcoming community events, and career opportunities.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <a
-              href="/growth#quiz"
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="mono-card px-4 py-2.5 text-center">
+              <div className="text-[0.62rem] font-mono text-[#737373] uppercase">XP Balance</div>
+              <div className="font-display font-black text-xl text-inherit">{currentUser?.xp || 0}</div>
+            </div>
+            <div className="mono-card px-4 py-2.5 text-center">
+              <div className="text-[0.62rem] font-mono text-[#737373] uppercase">Streak</div>
+              <div className="font-display font-black text-xl text-inherit flex items-center justify-center gap-1">
+                <span>🔥</span> {growthProgress.currentStreak}
+              </div>
+            </div>
+            <Link
+              href="/profile"
               onClick={() => soundEffects.playClick()}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.84rem', padding: '8px 16px', textDecoration: 'none' }}
+              className="btn btn-secondary text-xs py-3 px-4 font-bold inline-flex items-center gap-1.5 no-underline text-inherit"
             >
-              Take 10-Q Diagnostic
-            </a>
-            <a
-              href="/growth"
-              onClick={() => soundEffects.playClick()}
-              className="btn btn-primary"
-              style={{ fontSize: '0.84rem', padding: '8px 16px', textDecoration: 'none' }}
-            >
-              Open Full Growth Hub
-            </a>
+              <User size={14} />
+              <span>Profile</span>
+            </Link>
           </div>
         </div>
 
-        {/* Radar & Metrics Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '28px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <SkillRadar />
+        {/* SECTION 1: TODAY'S CHALLENGE & RAPID ACTIONS */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Today's Challenge */}
+          <div className="lg:col-span-2 mono-card p-6 sm:p-8 space-y-5 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono text-[#737373]">
+                <span className="mono-badge text-[0.62rem] py-0.5 px-2">TODAY&apos;S CHALLENGE</span>
+                <span>+50 XP</span>
+              </div>
+              <h3 className="font-display font-bold text-xl sm:text-2xl text-inherit">
+                30-Second Elevator Pitch: State Your Engineering Domain
+              </h3>
+              <p className="text-xs sm:text-sm text-[#737373] leading-relaxed">
+                Introduce yourself, your primary technology stack (e.g., Next.js, Rust, or Python ML), and the problem you are solving in 3 concise sentences without filler words.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-between">
+              <span className="text-xs font-mono text-[#737373]">
+                Communication Hub
+              </span>
+              <Link
+                href="/growth"
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-primary text-xs py-2 px-5 font-bold inline-flex items-center gap-2"
+              >
+                <span>Launch Practice</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div
-              style={{
-                padding: '16px 20px',
-                borderRadius: '16px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>GROWTH XP PROGRESSION</span>
-                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>{growthProgress.xp} XP</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${Math.min(100, (growthProgress.xp % 500) / 5)}%`,
-                    height: '100%',
-                    background: 'linear-gradient(90deg, #10b981, #06b6d4)',
-                    borderRadius: '999px',
-                  }}
-                />
-              </div>
+          {/* Rapid Ecosystem Launchers */}
+          <div className="mono-card p-6 sm:p-8 space-y-4">
+            <div className="editorial-eyebrow">
+              CONTINUE LEARNING
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div
-                style={{
-                  padding: '14px',
-                  borderRadius: '14px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid var(--border-subtle)',
-                  textAlign: 'center',
-                }}
+            <div className="space-y-2.5">
+              <Link
+                href="/notes"
+                onClick={() => soundEffects.playClick()}
+                className="p-3 rounded-xl border border-white/10 hover:border-white/30 bg-white/[0.02] flex items-center justify-between text-xs font-semibold text-inherit no-underline transition-colors block"
               >
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>DIAGNOSTICS TAKEN</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
-                  {growthProgress.totalQuizSessions}
+                <div className="flex items-center gap-2.5">
+                  <FolderGit2 size={15} />
+                  <span>B.Tech Notes Drive</span>
                 </div>
-              </div>
+                <ArrowRight size={13} className="text-[#737373]" />
+              </Link>
 
-              <div
-                style={{
-                  padding: '14px',
-                  borderRadius: '14px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid var(--border-subtle)',
-                  textAlign: 'center',
-                }}
+              <Link
+                href="/growth"
+                onClick={() => soundEffects.playClick()}
+                className="p-3 rounded-xl border border-white/10 hover:border-white/30 bg-white/[0.02] flex items-center justify-between text-xs font-semibold text-inherit no-underline transition-colors block"
               >
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>QUESTIONS SOLVED</div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '2px' }}>
-                  {growthProgress.totalQuestionsAnswered}
+                <div className="flex items-center gap-2.5">
+                  <Sparkles size={15} />
+                  <span>10-Q Verbal Diagnostic</span>
                 </div>
-              </div>
-            </div>
+                <ArrowRight size={13} className="text-[#737373]" />
+              </Link>
 
-            <div
-              style={{
-                padding: '16px',
-                borderRadius: '16px',
-                background: 'rgba(16, 185, 129, 0.06)',
-                border: '1px solid rgba(16, 185, 129, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
-                  Play &ldquo;Say It Better&rdquo; Arena
-                </div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                  Refine crude campus phrases into polished executive statements
-                </div>
-              </div>
-              <a
+              <Link
                 href="/games"
                 onClick={() => soundEffects.playClick()}
-                className="btn btn-primary"
-                style={{ fontSize: '0.78rem', padding: '6px 14px', textDecoration: 'none', flexShrink: 0 }}
+                className="p-3 rounded-xl border border-white/10 hover:border-white/30 bg-white/[0.02] flex items-center justify-between text-xs font-semibold text-inherit no-underline transition-colors block"
               >
-                Play Now
-              </a>
+                <div className="flex items-center gap-2.5">
+                  <Gamepad2 size={15} />
+                  <span>Say It Better Arena</span>
+                </div>
+                <ArrowRight size={13} className="text-[#737373]" />
+              </Link>
+
+              <Link
+                href="/opportunities"
+                onClick={() => soundEffects.playClick()}
+                className="p-3 rounded-xl border border-white/10 hover:border-white/30 bg-white/[0.02] flex items-center justify-between text-xs font-semibold text-inherit no-underline transition-colors block"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Briefcase size={15} />
+                  <span>Jobs &amp; Internships</span>
+                </div>
+                <ArrowRight size={13} className="text-[#737373]" />
+              </Link>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Referral & Invites Hub Card */}
-      {(() => {
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://nirvana.community';
-        const referralCode = currentUser.referralCode || `TYGN-${(currentUser.username || 'USER').toUpperCase()}`;
-        const referralLink = `${origin}/?ref=${encodeURIComponent(referralCode)}`;
-        const invitesCount = currentUser.referralCount || 0;
-        const creditsEarned = invitesCount * 10;
-
-        const handleCopyLink = () => {
-          soundEffects.playSuccess();
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(referralLink);
-          }
-          setCopiedLink(true);
-          setTimeout(() => setCopiedLink(false), 2500);
-        };
-
-        return (
-          <div
-            className="glass-card glow-border"
-            style={{
-              marginBottom: '40px',
-              padding: '28px 32px',
-              borderRadius: '24px',
-              background: 'linear-gradient(135deg, rgba(14, 20, 36, 0.95) 0%, rgba(20, 16, 38, 0.95) 100%)',
-              border: '1px solid rgba(6, 182, 212, 0.35)',
-              boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(6, 182, 212, 0.1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(99, 102, 241, 0.2))',
-                    border: '1px solid rgba(6, 182, 212, 0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--accent-cyan)',
-                  }}
-                >
-                  <Gift size={24} />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="badge badge-cyan" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                      REFERRAL REWARDS
-                    </span>
-                  </div>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginTop: '4px', color: 'var(--text-primary)' }}>
-                    Invite Friends &amp; Earn Permanent Credits
-                  </h2>
-                </div>
+        {/* SECTION 2: GROWTH PROGRESS (SKILL RADAR) */}
+        <div className="mono-card p-6 sm:p-12 space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/10 dark:border-white/10 light:border-black/10">
+            <div>
+              <div className="editorial-eyebrow">
+                GROWTH PROGRESS // VERIFIED COMPETENCIES
               </div>
-
-              <button
-                onClick={() => {
-                  soundEffects.playClick();
-                  setIsReferralModalOpen(true);
-                }}
-                className="btn btn-secondary"
-                style={{ padding: '8px 16px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-              >
-                <ExternalLink size={14} /> Full Referral Program
-              </button>
+              <h2 className="editorial-title text-2xl sm:text-4xl mt-1">
+                Personal Growth Radar
+              </h2>
             </div>
-
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, marginBottom: '20px' }}>
-              Share your personal invite link. For each friend who signs up using your code, you immediately receive{' '}
-              <strong style={{ color: 'var(--accent-cyan)' }}>10 Permanent Credits</strong>, and your friend gets 10 welcome credits!
-            </p>
-
-            {/* Metrics & Copy Link Bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <div
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-subtle)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>FRIENDS JOINED</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
-                    {invitesCount}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    background: 'rgba(6, 182, 212, 0.08)',
-                    border: '1px solid rgba(6, 182, 212, 0.25)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>PERMANENT CREDITS</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '2px' }}>
-                    +{creditsEarned}
-                  </div>
-                </div>
-              </div>
-
-              {/* Referral Link Copy Field */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '12px',
-                  padding: '5px 5px 5px 12px',
-                }}
-              >
-                <input
-                  type="text"
-                  readOnly
-                  value={referralLink}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.84rem',
-                    flex: 1,
-                    fontFamily: 'monospace',
-                  }}
-                />
-                <button
-                  onClick={handleCopyLink}
-                  className="btn btn-primary"
-                  style={{ padding: '8px 14px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                >
-                  {copiedLink ? <Check size={14} /> : <Copy size={14} />}
-                  {copiedLink ? 'Copied!' : 'Copy Link'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Main Grid: AI Recommendations & Your Activity */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '32px',
-        }}
-      >
-        {/* Recommended For You */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={20} style={{ color: 'var(--accent-indigo)' }} />
-              <h2 style={{ fontSize: '1.35rem', fontWeight: 800 }}>AI Recommendations for You</h2>
-            </div>
-            <a href="/opportunities" style={{ fontSize: '0.85rem', color: 'var(--accent-indigo)', textDecoration: 'none', fontWeight: 600 }}>
-              View All
-            </a>
+            <Link
+              href="/growth"
+              onClick={() => soundEffects.playClick()}
+              className="text-xs font-mono text-inherit hover:opacity-70 transition-opacity inline-flex items-center gap-1.5 no-underline"
+            >
+              <span>View Full Diagnostic</span>
+              <ArrowRight size={13} />
+            </Link>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {opportunities.map(opp => (
-              <div
-                key={opp.id}
-                className="glass-card glass-card-interactive"
-                style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}
+          <div className="flex justify-center py-4">
+            <SkillRadar />
+          </div>
+        </div>
+
+        {/* SECTION 3: UPCOMING EVENTS & NEW OPPORTUNITIES */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming Events */}
+          <div className="mono-card p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 dark:border-white/10 light:border-black/10">
+              <div>
+                <div className="editorial-eyebrow">SCHEDULE</div>
+                <h3 className="font-display font-bold text-xl text-inherit">Upcoming Events</h3>
+              </div>
+              <Link
+                href="/events"
+                onClick={() => soundEffects.playClick()}
+                className="text-xs font-mono text-inherit hover:opacity-70 no-underline"
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{opp.company}</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{opp.title}</div>
+                View All
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {events.map((evt) => (
+                <div 
+                  key={evt.id}
+                  className="p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-start justify-between gap-4"
+                >
+                  <div className="space-y-1">
+                    <span className="mono-badge text-[0.62rem] py-0.5 px-2">{evt.category}</span>
+                    <h4 className="font-display font-bold text-sm text-inherit">{evt.title}</h4>
+                    <p className="text-xs text-[#737373]">{evt.date} • {evt.location}</p>
                   </div>
-                  <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
-                    AI MATCH: 94%
-                  </span>
+                  <Link
+                    href={`/events?id=${evt.id}`}
+                    onClick={() => soundEffects.playClick()}
+                    className="btn btn-outline text-xs py-1 px-3 shrink-0 no-underline text-inherit"
+                  >
+                    Details
+                  </Link>
                 </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  Matches your verified skills in {opp.skills.slice(0, 2).join(', ')}.
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-emerald)' }}>
-                    {opp.stipendOrSalary}
-                  </span>
-                  <a
+              ))}
+            </div>
+          </div>
+
+          {/* New Opportunities */}
+          <div className="mono-card p-6 sm:p-8 space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 dark:border-white/10 light:border-black/10">
+              <div>
+                <div className="editorial-eyebrow">CAREERS</div>
+                <h3 className="font-display font-bold text-xl text-inherit">New Opportunities</h3>
+              </div>
+              <Link
+                href="/opportunities"
+                onClick={() => soundEffects.playClick()}
+                className="text-xs font-mono text-inherit hover:opacity-70 no-underline"
+              >
+                View All
+              </Link>
+            </div>
+
+            <div className="space-y-4">
+              {opportunities.map((opp) => (
+                <div 
+                  key={opp.id}
+                  className="p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-start justify-between gap-4"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-bold text-inherit">{opp.company}</span>
+                      <span className="mono-badge text-[0.62rem] py-0.5 px-2">{opp.type}</span>
+                    </div>
+                    <h4 className="font-display font-bold text-sm text-inherit">{opp.title}</h4>
+                    <p className="text-xs text-[#737373]">{opp.location} • {opp.stipendOrSalary}</p>
+                  </div>
+                  <Link
                     href={`/opportunities?id=${opp.id}`}
                     onClick={() => soundEffects.playClick()}
-                    className="btn-ghost"
-                    style={{ fontSize: '0.8rem', padding: '4px 8px', textDecoration: 'none', color: 'var(--accent-cyan)' }}
+                    className="btn btn-primary text-xs py-1 px-3 shrink-0 no-underline"
                   >
-                    Details <ArrowRight size={12} />
-                  </a>
+                    Apply
+                  </Link>
                 </div>
-              </div>
-            ))}
-
-            {/* Event Recommendation */}
-            {events.length > 0 && (
-              <div
-                className="glass-card glass-card-interactive"
-                style={{ padding: '20px', borderLeft: '4px solid var(--accent-amber)' }}
-              >
-                <div className="badge badge-amber" style={{ fontSize: '0.7rem', marginBottom: '6px' }}>
-                  RECOMMENDED EVENT
-                </div>
-                <div style={{ fontSize: '1rem', fontWeight: 700 }}>{events[0].title}</div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  {events[0].date} • {events[0].participantsCount} participants registered
-                </div>
-                <a
-                  href={`/events?id=${events[0].id}`}
-                  onClick={() => soundEffects.playClick()}
-                  className="btn-secondary"
-                  style={{ display: 'inline-flex', marginTop: '12px', fontSize: '0.8rem', padding: '6px 12px', textDecoration: 'none' }}
-                >
-                  Register Now
-                </a>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Your Activity & Submissions */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
-            <Clock size={20} style={{ color: 'var(--accent-cyan)' }} />
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Your Platform Activity</h2>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Status of user's submissions */}
-            <div className="glass-card" style={{ padding: '22px' }}>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Layers size={16} /> Submissions &amp; Approvals
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>Open Source Community Day</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Community Event Submission</div>
-                  </div>
-                  <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
-                    PENDING APPROVAL
-                  </span>
-                </div>
-
-                <div
-                  style={{
-                    padding: '12px',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>Junior DevOps &amp; Cloud Engineer</div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Aether Cloud Labs</div>
-                  </div>
-                  <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
-                    IN REVIEW
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Badges Earned */}
-            <div className="glass-card" style={{ padding: '22px' }}>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Trophy size={16} style={{ color: 'var(--accent-amber)' }} /> Badges Unlocked
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {(currentUser.badges || []).map((b: string, i: number) => (
-                  <span key={i} className="badge badge-indigo" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>
-                    {b}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Active Quizzes */}
-            <div className="glass-card" style={{ padding: '22px' }}>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Radio size={16} style={{ color: 'var(--accent-rose)' }} /> Live Quizzes &amp; Challenges
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {quizzes.map(q => (
-                  <div key={q.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem' }}>
-                    <span>{q.title}</span>
-                    <a
-                      href={`/live/create?quizId=${q.id}`}
-                      className="btn-ghost"
-                      style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', textDecoration: 'none' }}
-                    >
-                      Play
-                    </a>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
-      </div>
-      <ReferralModal isOpen={isReferralModalOpen} onClose={() => setIsReferralModalOpen(false)} />
     </ProtectedRoute>
   );
 }

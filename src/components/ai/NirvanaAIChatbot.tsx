@@ -38,14 +38,36 @@ export function NirvanaAIChatbot() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
+
+  const handleOpen = () => {
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/dashboard');
+      return;
+    }
+    soundEffects.playClick();
+    setIsOpen(true);
+  };
+
+  // Close if unauthenticated
+  useEffect(() => {
+    if (!isAuthenticated && isOpen) {
+      setIsOpen(false);
+    }
+  }, [isAuthenticated, isOpen]);
 
   // Listen to custom toggle events from navbar or command palette
   useEffect(() => {
-    const handleToggle = () => setIsOpen(prev => !prev);
+    const handleToggle = () => {
+      if (!isAuthenticated) {
+        router.push('/login?redirect=/dashboard');
+        return;
+      }
+      setIsOpen(prev => !prev);
+    };
     window.addEventListener('toggle-nirvana-ai', handleToggle);
     return () => window.removeEventListener('toggle-nirvana-ai', handleToggle);
-  }, []);
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,8 +116,6 @@ export function NirvanaAIChatbot() {
       const aiResponse = await aiService.processChat(promptToSend, messages, currentUser);
       setMessages(prev => [...prev, aiResponse]);
       soundEffects.playSuccess();
-
-      // If tool call exists, auto highlight
     } catch {
       setMessages(prev => [
         ...prev,
@@ -116,11 +136,8 @@ export function NirvanaAIChatbot() {
       {/* Floating Trigger Button */}
       {!isOpen && (
         <button
-          onClick={() => {
-            soundEffects.playClick();
-            setIsOpen(true);
-          }}
-          className="animate-float glow-border"
+          onClick={handleOpen}
+          aria-label="Ask Nirvana AI"
           style={{
             position: 'fixed',
             bottom: '24px',
@@ -129,27 +146,28 @@ export function NirvanaAIChatbot() {
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            padding: '12px 18px',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--gradient-nirvana)',
-            color: '#ffffff',
-            border: 'none',
+            padding: '12px 20px',
+            borderRadius: '9999px',
+            background: '#ffffff',
+            color: '#000000',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
-            boxShadow: 'var(--shadow-cyan-glow)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
             fontFamily: 'var(--font-sans)',
             fontWeight: 700,
-            fontSize: '0.9rem',
+            fontSize: '0.82rem',
+            letterSpacing: '0.04em',
+            transition: 'all 0.2s ease',
           }}
         >
-          <Sparkles size={19} className="animate-pulse-glow" />
-          <span>Ask Nirvana AI</span>
+          <Sparkles size={16} color="#000000" />
+          <span>ASK NIRVANA AI</span>
           <span
             style={{
-              width: '8px',
-              height: '8px',
+              width: '6px',
+              height: '6px',
               borderRadius: '50%',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 8px #10b981',
+              backgroundColor: '#000000',
             }}
           />
         </button>
@@ -158,20 +176,21 @@ export function NirvanaAIChatbot() {
       {/* Floating Chat Modal */}
       {isOpen && (
         <div
-          className="glass-card"
           style={{
             position: 'fixed',
             bottom: '20px',
             right: '20px',
             zIndex: 1000,
-            width: isExpanded ? '640px' : '390px',
-            height: isExpanded ? '720px' : '560px',
+            width: isExpanded ? '640px' : '400px',
+            height: isExpanded ? '720px' : '580px',
             maxWidth: 'calc(100vw - 32px)',
             maxHeight: 'calc(100vh - 40px)',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: 'var(--shadow-lg)',
-            border: '1px solid var(--border-glow)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            background: '#0a0a0a',
+            borderRadius: '16px',
             overflow: 'hidden',
             transition: 'width 0.2s ease, height 0.2s ease',
           }}
@@ -183,35 +202,34 @@ export function NirvanaAIChatbot() {
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '14px 18px',
-              background: 'linear-gradient(90deg, rgba(6, 182, 212, 0.15), rgba(99, 102, 241, 0.15))',
-              borderBottom: '1px solid var(--border-subtle)',
+              background: '#0d0d0d',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
-                  background: 'var(--gradient-nirvana)',
+                  background: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 12px rgba(6, 182, 212, 0.4)',
                 }}
               >
-                <Bot size={18} color="#fff" />
+                <Bot size={18} color="#000000" />
               </div>
               <div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  Nirvana AI
-                  <span className="badge badge-cyan" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
-                    Companion
+                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  NIRVANA AI
+                  <span style={{ fontSize: '0.62rem', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(255, 255, 255, 0.2)', background: 'rgba(255, 255, 255, 0.05)', color: '#a3a3a3', letterSpacing: '0.05em' }}>
+                    INTELLIGENCE
                   </span>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                  Tool-Calling Online
+                <div style={{ fontSize: '0.7rem', color: '#737373', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ffffff' }} />
+                  Autonomous Model
                 </div>
               </div>
             </div>
@@ -221,7 +239,7 @@ export function NirvanaAIChatbot() {
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="btn-ghost"
                 title={isExpanded ? 'Collapse' : 'Expand'}
-                style={{ padding: '6px', borderRadius: '4px' }}
+                style={{ padding: '6px', borderRadius: '6px', color: '#a3a3a3' }}
               >
                 {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
@@ -229,7 +247,7 @@ export function NirvanaAIChatbot() {
                 onClick={() => setIsOpen(false)}
                 className="btn-ghost"
                 title="Close"
-                style={{ padding: '6px', borderRadius: '4px' }}
+                style={{ padding: '6px', borderRadius: '6px', color: '#a3a3a3' }}
               >
                 <X size={17} />
               </button>
@@ -243,43 +261,38 @@ export function NirvanaAIChatbot() {
               gap: '6px',
               padding: '8px 12px',
               overflowX: 'auto',
-              borderBottom: '1px solid var(--border-subtle)',
-              background: 'rgba(0,0,0,0.15)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              background: '#080808',
               scrollbarWidth: 'none',
             }}
           >
             <button
               onClick={() => handleSend('Guide me through how to use TYGN platform features')}
-              className="btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)' }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
               <HelpCircle size={12} /> Platform Guide
             </button>
             <button
               onClick={() => handleSend('How do I access the B.Tech Notes Drive?')}
-              className="btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '12px' }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#a3a3a3', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
               <BookOpen size={12} /> Notes Drive
             </button>
             <button
               onClick={() => handleSend('Guide me through the AI Resume Analyzer with PDF/Image')}
-              className="btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '12px' }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#a3a3a3', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
               <FileText size={12} /> Resume Analyzer
             </button>
             <button
               onClick={() => handleSend('How to join a Nirvana Live Quiz?')}
-              className="btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '12px' }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#a3a3a3', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
               <Radio size={12} /> Live Quizzes
             </button>
             <button
               onClick={() => handleSend('Show me tech internships')}
-              className="btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '4px 8px', borderRadius: '12px' }}
+              style={{ fontSize: '0.72rem', padding: '5px 10px', borderRadius: '9999px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#a3a3a3', display: 'inline-flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', cursor: 'pointer' }}
             >
               <Briefcase size={12} /> Internships
             </button>
@@ -312,7 +325,7 @@ export function NirvanaAIChatbot() {
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      background: 'var(--gradient-nirvana)',
+                      background: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -320,7 +333,7 @@ export function NirvanaAIChatbot() {
                       marginTop: '2px',
                     }}
                   >
-                    <Bot size={15} color="#fff" />
+                    <Bot size={15} color="#000000" />
                   </div>
                 )}
 
@@ -334,15 +347,15 @@ export function NirvanaAIChatbot() {
                 >
                   <div
                     style={{
-                      padding: '10px 14px',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '0.88rem',
-                      lineHeight: '1.45',
-                      background: msg.role === 'user' ? 'var(--gradient-nirvana)' : 'rgba(255, 255, 255, 0.06)',
-                      color: msg.role === 'user' ? '#ffffff' : 'var(--text-primary)',
-                      border: msg.role === 'user' ? 'none' : '1px solid var(--border-subtle)',
-                      boxShadow: msg.role === 'user' ? '0 2px 10px rgba(99, 102, 241, 0.3)' : 'none',
+                      padding: '11px 15px',
+                      borderRadius: '12px',
+                      fontSize: '0.86rem',
+                      lineHeight: '1.5',
+                      background: msg.role === 'user' ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
+                      color: msg.role === 'user' ? '#000000' : '#e5e5e5',
+                      border: msg.role === 'user' ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
                       whiteSpace: 'pre-wrap',
+                      fontWeight: msg.role === 'user' ? 500 : 400,
                     }}
                   >
                     {msg.content}
@@ -353,27 +366,33 @@ export function NirvanaAIChatbot() {
                         style={{
                           marginTop: '10px',
                           padding: '10px 12px',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(6, 182, 212, 0.1)',
-                          border: '1px solid rgba(6, 182, 212, 0.3)',
+                          borderRadius: '8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           gap: '8px',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#22d3ee', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#ffffff', fontWeight: 600 }}>
                           <Sparkles size={14} />
                           {msg.toolCall.displayText}
                         </div>
                         <button
                           onClick={() => executeToolCall(msg.toolCall!)}
-                          className="btn-primary"
                           style={{
-                            padding: '4px 10px',
-                            fontSize: '0.75rem',
-                            borderRadius: '6px',
+                            padding: '5px 12px',
+                            fontSize: '0.72rem',
+                            borderRadius: '9999px',
+                            background: '#ffffff',
+                            color: '#000000',
+                            border: 'none',
+                            fontWeight: 600,
                             cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
                           }}
                         >
                           Execute <ArrowRight size={12} />
@@ -384,7 +403,7 @@ export function NirvanaAIChatbot() {
                   <span
                     style={{
                       fontSize: '0.68rem',
-                      color: 'var(--text-muted)',
+                      color: '#737373',
                       alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                     }}
                   >
@@ -398,14 +417,14 @@ export function NirvanaAIChatbot() {
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.12)',
+                      background: 'rgba(255, 255, 255, 0.15)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}
                   >
-                    <UserIcon size={14} color="var(--text-primary)" />
+                    <UserIcon size={14} color="#ffffff" />
                   </div>
                 )}
               </div>
@@ -418,17 +437,23 @@ export function NirvanaAIChatbot() {
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',
-                    background: 'var(--gradient-nirvana)',
+                    background: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Bot size={15} color="#fff" />
+                  <Bot size={15} color="#000000" />
                 </div>
                 <div
-                  className="badge badge-indigo animate-pulse-glow"
-                  style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                  style={{
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#a3a3a3',
+                  }}
                 >
                   Nirvana AI is thinking & reasoning...
                 </div>
@@ -441,8 +466,8 @@ export function NirvanaAIChatbot() {
           <div
             style={{
               padding: '12px 14px',
-              borderTop: '1px solid var(--border-subtle)',
-              background: 'rgba(0, 0, 0, 0.2)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#0d0d0d',
               display: 'flex',
               gap: '8px',
               alignItems: 'center',
@@ -450,7 +475,7 @@ export function NirvanaAIChatbot() {
           >
             <input
               type="text"
-              placeholder="Ask anything or request site actions..."
+              placeholder="Ask anything or request actions..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
@@ -459,23 +484,28 @@ export function NirvanaAIChatbot() {
               style={{
                 flex: 1,
                 background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-md)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
                 padding: '10px 14px',
-                color: 'var(--text-primary)',
-                fontSize: '0.88rem',
+                color: '#ffffff',
+                fontSize: '0.86rem',
                 outline: 'none',
               }}
             />
             <button
               onClick={() => handleSend()}
               disabled={isLoading || !input.trim()}
-              className="btn-primary"
               style={{
                 padding: '10px 14px',
-                borderRadius: 'var(--radius-md)',
-                opacity: isLoading || !input.trim() ? 0.6 : 1,
+                borderRadius: '8px',
+                background: '#ffffff',
+                color: '#000000',
+                border: 'none',
+                opacity: isLoading || !input.trim() ? 0.4 : 1,
                 cursor: isLoading || !input.trim() ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <Send size={16} />
@@ -486,3 +516,4 @@ export function NirvanaAIChatbot() {
     </>
   );
 }
+
