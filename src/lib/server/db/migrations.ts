@@ -209,6 +209,9 @@ export async function runMigrations(): Promise<void> {
     try {
       await db.execute('ALTER TABLE community_events ADD COLUMN poster_url TEXT');
     } catch (_) {}
+    try {
+      await db.execute("UPDATE community_events SET status = 'approved' WHERE status = 'pending' OR status IS NULL");
+    } catch (_) {}
 
     // Seed Collab Requests if table is empty
     const collabCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM collab_requests');

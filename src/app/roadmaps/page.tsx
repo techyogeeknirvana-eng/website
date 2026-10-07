@@ -47,7 +47,7 @@ export default function RoadmapsPage() {
   const progressPercent = Math.round((completedInRoadmap / Math.max(1, totalTopics)) * 100);
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <span className="badge badge-cyan" style={{ marginBottom: '8px' }}>

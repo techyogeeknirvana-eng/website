@@ -41,7 +41,7 @@ export default function TechRadarPage() {
     : radarItems.filter(item => item.quadrant === activeQuadrant);
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
         <span className="badge badge-indigo" style={{ marginBottom: '8px' }}>

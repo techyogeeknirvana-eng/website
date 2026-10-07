@@ -249,7 +249,7 @@ export default function SubmitEventPage() {
 
   return (
     <ProtectedRoute>
-      <div className="container-custom" style={{ padding: '40px 20px 80px 20px', maxWidth: '840px' }}>
+      <div className="container-custom" style={{ padding: '20px 20px 80px 20px', maxWidth: '840px' }}>
         <button
           onClick={() => router.back()}
           className="btn-ghost"

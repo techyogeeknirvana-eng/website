@@ -179,7 +179,7 @@ export default function NirvanaMomentsPage() {
     : moments.filter(m => m.category === selectedCategory);
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px', maxWidth: '780px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px', maxWidth: '780px' }}>
       {/* Header */}
       <div style={{ marginBottom: '28px', textAlign: 'center' }}>
         <span className="badge badge-indigo" style={{ marginBottom: '8px' }}>

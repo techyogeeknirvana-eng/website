@@ -110,7 +110,7 @@ export default function NirvanaLiveLobby() {
   };
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px' }}>
       {/* Hero Banner */}
       <div
         className="glass-card glow-border"

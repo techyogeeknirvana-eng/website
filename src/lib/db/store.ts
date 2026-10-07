@@ -752,10 +752,8 @@ class DataStore {
   // --- Events ---
   public getEvents(includePending: boolean = false, currentUserId?: string): CommunityEvent[] {
     if (includePending) return [...this.events];
-    return this.events.filter(e => 
-      e.status === 'approved' || 
-      (Boolean(currentUserId) && (e.postedBy?.id === currentUserId || (e as any).postedByUserId === currentUserId))
-    );
+    // Return all active events (exclude only rejected) so all users can see community events
+    return this.events.filter(e => e.status !== 'rejected');
   }
 
   public getEvent(id: string): CommunityEvent | undefined {
@@ -801,7 +799,7 @@ class DataStore {
       id: 'event_' + Date.now(),
       participantsCount: 1,
       registeredUsers: [postedBy.id],
-      status: postedBy.role === 'ADMIN' ? 'approved' : 'pending',
+      status: 'approved',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,

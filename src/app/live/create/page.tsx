@@ -132,7 +132,7 @@ function CreateLiveDeckContent() {
   };
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px', maxWidth: '860px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px', maxWidth: '860px' }}>
       <button
         onClick={() => router.back()}
         className="btn-ghost"

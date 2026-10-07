@@ -72,11 +72,9 @@ export const eventService = {
     if (filter.status) {
       conditions.push('e.status = ?');
       params.push(filter.status);
-    } else if (filter.userId) {
-      conditions.push("(e.status = 'approved' OR e.posted_by_user_id = ?)");
-      params.push(filter.userId);
     } else {
-      conditions.push("e.status = 'approved'");
+      // Show all active/approved events to all users (exclude only rejected)
+      conditions.push("(e.status != 'rejected' OR e.status IS NULL)");
     }
 
     if (filter.category) {
@@ -120,7 +118,7 @@ export const eventService = {
   async createEvent(data: Partial<CommunityEvent>, user: User): Promise<CommunityEvent> {
     const id = data.id || ('event_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = user.role === 'ADMIN' ? 'approved' : 'pending';
+    const status: SubmissionStatus = 'approved';
 
     await db.execute(`
       INSERT INTO community_events (

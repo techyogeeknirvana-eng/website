@@ -136,7 +136,7 @@ export default function EventsPage() {
   });
 
   return (
-    <div className="container-custom" style={{ padding: '40px 20px 80px 20px' }}>
+    <div className="container-custom" style={{ padding: '20px 20px 80px 20px' }}>
       {/* Header */}
       <div
         style={{
