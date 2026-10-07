@@ -22,7 +22,7 @@ export function HeroCyberWarrior() {
     {
       id: 'intro',
       pillar: 'ECOSYSTEM',
-      headline: 'TYGN NIRVANA',
+      headline: 'TechYOGeek Nirvana (TYGN)',
       subline: 'THE B.TECH STUDENT COMMUNITY',
       description: 'An institutional-grade technology platform where ambition meets disciplined execution. Learn curriculum, build production software, compete under clock pressure, and master executive presence.',
     },
@@ -210,7 +210,11 @@ export function HeroCyberWarrior() {
               <span className="text-xs sm:text-sm font-mono font-bold uppercase tracking-[0.25em] text-[#737373] block">
                 {activeScene.subline}
               </span>
-              <h1 className="font-display font-black tracking-tight leading-[0.9] text-5xl sm:text-7xl md:text-8xl lg:text-9xl text-white transition-all duration-300">
+              <h1 className={`font-display font-black tracking-tight leading-[0.95] text-white transition-all duration-300 ${
+                activeScene.headline.length > 15
+                  ? 'text-4xl sm:text-6xl md:text-7xl lg:text-8xl'
+                  : 'text-5xl sm:text-7xl md:text-8xl lg:text-9xl'
+              }`}>
                 {activeScene.headline}
               </h1>
             </div>
@@ -397,13 +401,13 @@ export function HeroCyberWarrior() {
                 soundEffects.playClick();
                 setCurrentScene(idx);
               }}
-              className={`text-[0.68rem] font-mono font-bold px-3 py-1.5 rounded-full border transition-all ${
+              className={`text-[0.68rem] font-mono font-bold px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${
                 currentScene === idx
                   ? 'bg-white text-black border-white shadow-[0_0_14px_rgba(255,255,255,0.3)]'
                   : 'bg-black/60 border-white/10 text-[#737373] hover:text-white hover:border-white/20'
               }`}
             >
-              [ {s.headline} ]
+              [ {s.id === 'intro' ? 'TYGN ECOSYSTEM' : s.headline} ]
             </button>
           ))}
         </div>

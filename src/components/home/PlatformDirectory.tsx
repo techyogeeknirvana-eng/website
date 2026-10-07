@@ -59,7 +59,7 @@ export function PlatformDirectory() {
       items: [
         {
           id: 'about',
-          title: 'About TYGN',
+          title: 'About TechYOGeek Nirvana (TYGN)',
           description: 'The story, core manifesto, student founders, and mission uniting ambitious B.Tech builders.',
           href: '/about',
           icon: Info,
@@ -237,7 +237,7 @@ export function PlatformDirectory() {
             Full Platform Architecture
           </h2>
           <p className="text-xs sm:text-sm text-[#737373] dark:text-[#a3a3a3] light:text-[#525252] max-w-2xl leading-relaxed">
-            Every module in TYGN Nirvana is built to solve a concrete engineering hurdle. Explore our verified directory of learning resources, live competitions, AI suites, and community matchmaking.
+            Every module in TechYOGeek Nirvana (TYGN) is built to solve a concrete engineering hurdle. Explore our verified directory of learning resources, live competitions, AI suites, and community matchmaking.
           </p>
         </div>
 

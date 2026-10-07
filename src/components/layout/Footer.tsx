@@ -39,8 +39,9 @@ export function Footer() {
                   className="w-full h-full object-contain invert dark:invert-0"
                 />
               </div>
-              <span className="font-display font-black text-lg tracking-tight">
-                TYGN NIRVANA
+              <span className="font-display font-black text-base sm:text-lg tracking-tight flex items-center gap-2">
+                TechYOGeek Nirvana
+                <span className="text-[11px] font-mono px-1.5 py-0.5 rounded border border-white/20 text-[#a3a3a3] font-normal tracking-wider">(TYGN)</span>
               </span>
             </div>
             <p className="text-xs sm:text-sm text-[#737373] leading-relaxed max-w-xs">
@@ -176,7 +177,7 @@ export function Footer() {
         {/* Bottom Metadata */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#737373]">
           <div>
-            © {new Date().getFullYear()} TechYOGeek Nirvana. All rights reserved.
+            © {new Date().getFullYear()} TechYOGeek Nirvana (TYGN). All rights reserved.
           </div>
           <div className="flex items-center gap-6">
             <span>Learn. Build. Compete. Connect. Grow.</span>

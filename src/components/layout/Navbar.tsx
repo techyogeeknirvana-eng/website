@@ -102,11 +102,12 @@ export function Navbar() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-display font-black text-sm sm:text-base tracking-tight leading-none">
-                TYGN
+              <span className="font-display font-black text-xs sm:text-sm tracking-tight leading-none flex items-center gap-1.5">
+                <span>TechYOGeek Nirvana</span>
+                <span className="text-[0.68rem] font-mono font-bold text-[#a3a3a3]">(TYGN)</span>
               </span>
-              <span className="text-[0.62rem] font-bold uppercase tracking-widest text-[#737373] leading-none mt-0.5">
-                NIRVANA
+              <span className="text-[0.6rem] font-bold uppercase tracking-widest text-[#737373] leading-none mt-1">
+                STUDENT TECHNOLOGY ECOSYSTEM
               </span>
             </div>
           </Link>

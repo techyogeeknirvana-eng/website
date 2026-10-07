@@ -139,16 +139,17 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
-              <h1 className="font-display font-black text-4xl sm:text-6xl tracking-tight leading-none text-white">
-                TYGN NIRVANA
+              <h1 className="font-display font-black text-3xl sm:text-5xl tracking-tight leading-none text-white flex flex-wrap items-center gap-2 sm:gap-3">
+                TechYOGeek Nirvana
+                <span className="text-sm sm:text-base font-mono px-2 py-0.5 rounded border border-white/20 text-[#a3a3a3] font-normal tracking-wider">(TYGN)</span>
               </h1>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-[#a3a3a3] tracking-tight">
+              <p className="font-display font-bold text-xl sm:text-2xl text-[#a3a3a3] tracking-tight">
                 One ecosystem. Everything you need to grow.
               </p>
             </div>
 
             <p className="text-sm sm:text-base text-[#737373] leading-relaxed">
-              Sign in to access your notes, opportunities, events, games, Growth Hub and personalized TYGN experience.
+              Sign in to access your notes, opportunities, events, games, Growth Hub and personalized TechYOGeek Nirvana (TYGN) experience.
             </p>
 
             {/* Feature Access Highlights */}
@@ -174,7 +175,7 @@ function LoginContent() {
         </div>
 
         <div className="pt-8 text-xs font-mono text-[#525252]">
-          © {new Date().getFullYear()} TECHYOGEEK NIRVANA. VERIFIED STUDENT PLATFORM.
+          © {new Date().getFullYear()} TECHYOGEEK NIRVANA (TYGN). VERIFIED STUDENT PLATFORM.
         </div>
       </div>
 
@@ -182,8 +183,9 @@ function LoginContent() {
       <div className="lg:w-1/2 p-6 sm:p-12 lg:p-20 flex items-center justify-center relative z-10">
         <div className="w-full max-w-md mono-card p-8 sm:p-10 space-y-6">
           <div className="text-center space-y-1.5">
-            <h2 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-white">
-              Welcome to TYGN
+            <h2 className="font-display font-black text-2xl sm:text-3xl tracking-tight text-white flex items-center justify-center gap-2 flex-wrap">
+              <span>Welcome to TechYOGeek Nirvana</span>
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded border border-white/20 text-[#a3a3a3] font-normal">(TYGN)</span>
             </h2>
             <p className="text-xs sm:text-sm text-[#737373]">
               Sign in to continue to your dashboard

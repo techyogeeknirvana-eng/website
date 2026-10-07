@@ -15,21 +15,21 @@ import { ThemeCustomizerModal } from '@/components/theme/ThemeCustomizerModal';
 import { BreadcrumbBar } from '@/components/layout/BreadcrumbBar';
 
 export const metadata: Metadata = {
-  title: 'Techyogeek Nirvana — Where Tech Minds Connect, Create & Grow',
+  title: 'TechYOGeek Nirvana (TYGN) — Where Tech Minds Connect, Create & Grow',
   description: 'An AI-powered technology community platform combining Discord-style discussions, Unstop-style opportunities, Mentimeter-style live presentations, career tools, and developer networking.',
-  keywords: ['Techyogeek Nirvana', 'Developer Community', 'Tech Internships', 'Hackathons', 'Live Quizzes', 'AI Resume Checker', 'Tech Radar', 'Collab Finder'],
-  authors: [{ name: 'Techyogeek Nirvana Team', url: 'https://nirvana.community' }],
+  keywords: ['TechYOGeek Nirvana (TYGN)', 'TechYOGeek Nirvana', 'TYGN', 'Developer Community', 'Tech Internships', 'Hackathons', 'Live Quizzes', 'AI Resume Checker', 'Tech Radar', 'Collab Finder'],
+  authors: [{ name: 'TechYOGeek Nirvana (TYGN) Team', url: 'https://nirvana.community' }],
   openGraph: {
-    title: 'Techyogeek Nirvana — Connect. Create. Learn. Grow.',
+    title: 'TechYOGeek Nirvana (TYGN) — Connect. Create. Learn. Grow.',
     description: 'An AI-powered technology community for learning, opportunities, collaboration, and live quizzes.',
     url: 'https://nirvana.community',
-    siteName: 'Techyogeek Nirvana',
+    siteName: 'TechYOGeek Nirvana (TYGN)',
     images: [
       {
         url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
         width: 1200,
         height: 630,
-        alt: 'Techyogeek Nirvana Platform',
+        alt: 'TechYOGeek Nirvana (TYGN) Platform',
       },
     ],
     locale: 'en_US',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Techyogeek Nirvana — Connect. Create. Learn. Grow.',
+    title: 'TechYOGeek Nirvana (TYGN) — Connect. Create. Learn. Grow.',
     description: 'An AI-powered technology community platform for developers and students.',
     creator: '@techyogeek',
   },

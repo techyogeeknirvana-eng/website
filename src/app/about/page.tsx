@@ -50,7 +50,7 @@ const ABOUT_QUIZ_QUESTIONS: QuizQuestion[] = [
     explanation: 'TYGN stands for TechYOGeek Nirvana — an authentic student-led technology ecosystem founded in 2023.'
   },
   {
-    question: 'What is the signature 5-pillar motto of TYGN Nirvana?',
+    question: 'What is the signature 5-pillar motto of TechYOGeek Nirvana (TYGN)?',
     options: [
       'Code, Build, Deploy, Scale, Repeat',
       'Learn. Build. Compete. Connect. Grow.',
@@ -265,8 +265,9 @@ export default function AboutPage() {
           THE B.TECH STUDENT COMMUNITY
         </div>
 
-        <h1 className="editorial-title text-4xl sm:text-6xl md:text-8xl text-inherit">
-          TYGN NIRVANA
+        <h1 className="editorial-title text-3xl sm:text-5xl md:text-7xl text-inherit flex flex-wrap items-center justify-center gap-3">
+          <span>TechYOGeek Nirvana</span>
+          <span className="text-xl sm:text-3xl font-mono px-3 py-1 rounded-lg border border-white/20 text-[#a3a3a3] font-normal tracking-wider">(TYGN)</span>
         </h1>
 
         <div className="text-base sm:text-2xl font-mono font-bold tracking-tight text-[#a3a3a3]">
@@ -313,7 +314,7 @@ export default function AboutPage() {
             <h2 className="editorial-title text-3xl sm:text-5xl mt-1">Founders &amp; Builders</h2>
           </div>
           <p className="text-xs sm:text-sm text-[#737373] max-w-md">
-            Real student developers and technology enthusiasts who conceived, architected, and continuously evolve TYGN Nirvana.
+            Real student developers and technology enthusiasts who conceived, architected, and continuously evolve TechYOGeek Nirvana (TYGN).
           </p>
         </div>
 
@@ -567,7 +568,7 @@ export default function AboutPage() {
               </h3>
               <p className="text-xs text-[#737373]">
                 {calculateScore() >= 5
-                  ? 'Impressive! You understand the foundational philosophy and architecture of TYGN Nirvana.'
+                  ? 'Impressive! You understand the foundational philosophy and architecture of TechYOGeek Nirvana (TYGN).'
                   : 'Good effort! Explore our offerings to learn more about the student builder ecosystem.'}
               </p>
             </div>

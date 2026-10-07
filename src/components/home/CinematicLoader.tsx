@@ -80,10 +80,11 @@ export function CinematicLoader() {
                 />
               </div>
               <div className="flex flex-col items-center">
-                <span className="font-display font-black text-2xl tracking-tight text-white leading-none">
-                  TYGN NIRVANA
+                <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-white leading-none flex items-center gap-2">
+                  TechYOGeek Nirvana
+                  <span className="text-xs font-mono px-1.5 py-0.5 rounded border border-white/20 text-[#a3a3a3] font-normal tracking-wider">(TYGN)</span>
                 </span>
-                <span className="text-[0.62rem] font-mono uppercase tracking-[0.3em] text-[#737373] mt-1">
+                <span className="text-[0.62rem] font-mono uppercase tracking-[0.3em] text-[#737373] mt-2">
                   STUDENT TECHNOLOGY ECOSYSTEM
                 </span>
               </div>
