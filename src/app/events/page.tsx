@@ -83,7 +83,7 @@ function EventsContent() {
         userId: currentUser?.id 
       });
       if (res.data) {
-        dbStore.setEvents(res.data);
+        dbStore.setEvents(res.data, (res as any).deletedIds);
         const currentEvents = dbStore.getEvents(isAdmin, currentUser?.id);
         setEvents(currentEvents);
       }
@@ -96,7 +96,7 @@ function EventsContent() {
     const interval = setInterval(loadData, 4000);
     const onFocus = () => { loadData(); };
     const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === 'tygn_events') {
+      if (!e.key || e.key === 'tygn_events_v1' || e.key === 'tygn_events' || e.key === 'tygn_deleted_event_ids_v1') {
         loadData();
       }
     };
@@ -115,12 +115,12 @@ function EventsContent() {
     if (!currentUser) return;
     if (!confirm('Are you sure you want to permanently delete this event?')) return;
     soundEffects.playClick();
-    await api.events.delete(id);
     dbStore.deleteEvent(id, currentUser);
     setEvents(prev => prev.filter(evt => evt.id !== id));
     if (selectedEventModal?.id === id) {
       setSelectedEventModal(null);
     }
+    await api.events.delete(id);
   };
 
   const handleApproveEvent = async (id: string, e?: React.MouseEvent) => {

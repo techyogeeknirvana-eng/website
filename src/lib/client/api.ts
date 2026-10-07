@@ -5,7 +5,7 @@
 
 import { User, UserRole, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Project, CreditWallet, SystemAnnouncement, AuditLog, ContentReport, LiveSession, LiveParticipant, CollabRequest, EventRegistration, RegistrationStatus } from '@/types';
 
-async function request<T>(url: string, options: RequestInit = {}): Promise<{ data: T | null; error: string | null; pagination?: any }> {
+async function request<T>(url: string, options: RequestInit = {}): Promise<{ data: T | null; error: string | null; pagination?: any; deletedIds?: string[] }> {
   try {
     const token = typeof window !== 'undefined' ? localStorage.getItem('tygn_session_token') : null;
     let activeUserId = typeof window !== 'undefined' ? localStorage.getItem('tygn_active_user_id') : null;
@@ -48,7 +48,7 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<{ dat
       return { data: null, error: json.error || `HTTP ${res.status} Error`, pagination: json.pagination };
     }
 
-    return { data: json.data, error: null, pagination: json.pagination };
+    return { data: json.data, error: null, pagination: json.pagination, deletedIds: json.deletedIds };
   } catch (err: any) {
     return { data: null, error: err.message || 'Network request failed' };
   }

@@ -139,6 +139,10 @@ export const eventService = {
       ? 'approved' 
       : (data.status === 'draft' ? 'draft' : 'pending');
 
+    try {
+      await db.execute('DELETE FROM deleted_events WHERE id = ?', [id]);
+    } catch (_) {}
+
     await db.execute(`
       INSERT INTO community_events (
         id, title, category, organizer, organizer_logo, date, time, location,
@@ -147,6 +151,32 @@ export const eventService = {
         rules, schedule, prizes, team_size, fees, contact_email,
         posted_by_user_id, status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        category = excluded.category,
+        organizer = excluded.organizer,
+        organizer_logo = excluded.organizer_logo,
+        date = excluded.date,
+        time = excluded.time,
+        location = excluded.location,
+        is_online = excluded.is_online,
+        registration_deadline = excluded.registration_deadline,
+        description = excluded.description,
+        eligibility = excluded.eligibility,
+        skills = excluded.skills,
+        registration_url = excluded.registration_url,
+        event_website_url = excluded.event_website_url,
+        poster_url = excluded.poster_url,
+        max_participants = excluded.max_participants,
+        banner_image = excluded.banner_image,
+        rules = excluded.rules,
+        schedule = excluded.schedule,
+        prizes = excluded.prizes,
+        team_size = excluded.team_size,
+        fees = excluded.fees,
+        contact_email = excluded.contact_email,
+        status = excluded.status,
+        updated_at = excluded.updated_at
     `, [
       id,
       data.title || 'Untitled Community Event',
@@ -179,7 +209,41 @@ export const eventService = {
     ]);
 
     const evt = await this.getEventById(id);
-    return evt!;
+    return evt || {
+      id,
+      title: data.title || 'Untitled Community Event',
+      category: data.category || 'Workshops',
+      organizer: data.organizer || user.name,
+      organizerLogo: data.organizerLogo,
+      date: data.date || now.slice(0, 10),
+      time: data.time || '18:00 IST',
+      location: data.location || 'Online',
+      isOnline: data.isOnline !== false,
+      registrationDeadline: data.registrationDeadline || now.slice(0, 10),
+      description: data.description || '',
+      eligibility: data.eligibility || 'Open to all students',
+      skills: data.skills || [],
+      registrationUrl: data.registrationUrl || '',
+      eventWebsiteUrl: data.eventWebsiteUrl,
+      posterUrl: data.posterUrl || data.bannerImage,
+      bannerImage: data.bannerImage || data.posterUrl || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+      rules: data.rules,
+      schedule: data.schedule,
+      prizes: data.prizes,
+      teamSize: data.teamSize || 'Individual / Teams up to 4',
+      fees: data.fees || 'Free',
+      contactEmail: data.contactEmail || user.email,
+      postedBy: {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        role: user.role,
+      },
+      status,
+      participantsCount: 1,
+      createdAt: now,
+      registeredUsers: [],
+    };
   },
 
   async getEventById(id: string): Promise<CommunityEvent | null> {
@@ -280,9 +344,26 @@ export const eventService = {
     }
   },
 
+  async getDeletedEventIds(): Promise<string[]> {
+    try {
+      const rows = await db.queryAll<{ id: string }>('SELECT id FROM deleted_events');
+      return rows.map(r => r.id);
+    } catch (_) {
+      return [];
+    }
+  },
+
   async deleteEvent(id: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
     const target = await this.getEventById(id);
+
+    try {
+      await db.execute(`
+        INSERT INTO deleted_events (id, deleted_at) VALUES (?, ?)
+        ON CONFLICT(id) DO UPDATE SET deleted_at = excluded.deleted_at
+      `, [id, now]);
+    } catch (_) {}
+
     await db.execute("UPDATE community_events SET deleted_at = ?, status = 'rejected', updated_at = ? WHERE id = ?", [now, now, id]);
     await db.execute('DELETE FROM community_events WHERE id = ?', [id]);
     await db.execute('DELETE FROM event_registrations WHERE event_id = ?', [id]);

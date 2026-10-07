@@ -76,12 +76,14 @@ const STORAGE_KEYS = {
   REFERRALS: 'tygn_referrals_v1',
   ANNOUNCEMENTS: 'tygn_announcements_v1',
   DISMISSED_ANNOUNCEMENTS: 'tygn_dismissed_announcements_v1',
+  DELETED_EVENT_IDS: 'tygn_deleted_event_ids_v1',
 };
 
 class DataStore {
   private users: User[] = SEED_USERS;
   private opportunities: Opportunity[] = SEED_OPPORTUNITIES;
   private events: CommunityEvent[] = SEED_EVENTS;
+  private deletedEventIds: Set<string> = new Set();
   private channels: CommunityChannel[] = SEED_CHANNELS;
   private messages: CommunityMessage[] = SEED_MESSAGES;
   private moments: NirvanaMoment[] = SEED_MOMENTS;
@@ -226,6 +228,19 @@ class DataStore {
       const storedDismissed = localStorage.getItem(STORAGE_KEYS.DISMISSED_ANNOUNCEMENTS);
       if (storedDismissed) this.dismissedAnnouncements = JSON.parse(storedDismissed);
 
+      const storedDeletedEvents = localStorage.getItem(STORAGE_KEYS.DELETED_EVENT_IDS);
+      if (storedDeletedEvents) {
+        try {
+          const parsed = JSON.parse(storedDeletedEvents);
+          if (Array.isArray(parsed)) this.deletedEventIds = new Set(parsed);
+        } catch (_) {}
+      }
+
+      // Filter local memory events by loaded deleted IDs
+      if (this.deletedEventIds.size > 0) {
+        this.events = this.events.filter(e => !this.deletedEventIds.has(e.id));
+      }
+
       // Perform midnight check and auto-reset daily credits across wallets
       this.checkAndResetDailyCredits();
 
@@ -329,14 +344,31 @@ class DataStore {
       this.opportunities = Array.from(oppMap.values());
       this.save(STORAGE_KEYS.OPPORTUNITIES, this.opportunities);
 
-      // Merge events (approved + pending)
+      // Merge events (approved + pending) with deletion protection
+      if (eventsRes.status === 'fulfilled' && eventsRes.value && Array.isArray((eventsRes.value as any).deletedIds)) {
+        ((eventsRes.value as any).deletedIds as string[]).forEach(id => this.deletedEventIds.add(id));
+        this.save(STORAGE_KEYS.DELETED_EVENT_IDS, Array.from(this.deletedEventIds));
+      }
+
       const eventMap = new Map<string, CommunityEvent>();
-      this.events.forEach(e => eventMap.set(e.id, e));
+      this.events.forEach(e => {
+        if (!this.deletedEventIds.has(e.id)) {
+          eventMap.set(e.id, e);
+        }
+      });
       if (eventsRes.status === 'fulfilled' && eventsRes.value?.data?.length) {
-        eventsRes.value.data.forEach((e: CommunityEvent) => eventMap.set(e.id, e));
+        eventsRes.value.data.forEach((e: CommunityEvent) => {
+          if (!this.deletedEventIds.has(e.id)) {
+            eventMap.set(e.id, e);
+          }
+        });
       }
       if (pendingEventsRes.status === 'fulfilled' && pendingEventsRes.value?.data?.length) {
-        pendingEventsRes.value.data.forEach((e: CommunityEvent) => eventMap.set(e.id, e));
+        pendingEventsRes.value.data.forEach((e: CommunityEvent) => {
+          if (!this.deletedEventIds.has(e.id)) {
+            eventMap.set(e.id, e);
+          }
+        });
       }
       this.events = Array.from(eventMap.values());
       this.save(STORAGE_KEYS.EVENTS, this.events);
@@ -774,17 +806,38 @@ class DataStore {
     return this.events.find(e => e.id === id);
   }
 
-  public setEvents(serverEvents: CommunityEvent[]): void {
+  public getDeletedEventIds(): string[] {
+    return Array.from(this.deletedEventIds);
+  }
+
+  public markEventDeleted(id: string): void {
+    this.deletedEventIds.add(id);
+    this.save(STORAGE_KEYS.DELETED_EVENT_IDS, Array.from(this.deletedEventIds));
+    this.events = this.events.filter(e => e.id !== id);
+    this.save(STORAGE_KEYS.EVENTS, this.events);
+  }
+
+  public setEvents(serverEvents: CommunityEvent[], serverDeletedIds?: string[]): void {
+    if (Array.isArray(serverDeletedIds)) {
+      serverDeletedIds.forEach(id => this.deletedEventIds.add(id));
+      this.save(STORAGE_KEYS.DELETED_EVENT_IDS, Array.from(this.deletedEventIds));
+    }
+
     if (!Array.isArray(serverEvents)) return;
 
-    // Merge server events while preserving local pending submissions
+    // Merge server events while preserving local un-deleted events
     const eventMap = new Map<string, CommunityEvent>();
     this.events.forEach(e => {
-      if (e.status === 'pending' || (e as any).status === 'draft' || e.status === 'changes_requested') {
+      if (!this.deletedEventIds.has(e.id)) {
         eventMap.set(e.id, e);
       }
     });
-    serverEvents.forEach(e => eventMap.set(e.id, e));
+
+    serverEvents.forEach(e => {
+      if (!this.deletedEventIds.has(e.id)) {
+        eventMap.set(e.id, e);
+      }
+    });
 
     this.events = Array.from(eventMap.values()).sort((a, b) => {
       const dateA = new Date(a.createdAt || a.date || 0).getTime();
@@ -810,11 +863,16 @@ class DataStore {
         id: postedBy.id,
         name: postedBy.name,
         avatar: postedBy.avatar,
-        role: postedBy.role
+        role: postedBy.role,
       },
       createdAt: new Date().toISOString()
     };
     (newEvent as any).postedByUserId = postedBy.id;
+
+    // Clear from deleted set if newly created
+    this.deletedEventIds.delete(newEvent.id);
+    this.save(STORAGE_KEYS.DELETED_EVENT_IDS, Array.from(this.deletedEventIds));
+
     this.events.unshift(newEvent);
     this.save(STORAGE_KEYS.EVENTS, this.events);
     this.syncApi('/api/events', 'POST', newEvent);
@@ -870,6 +928,9 @@ class DataStore {
 
   public deleteEvent(id: string, adminUser: User): boolean {
     const event = this.getEvent(id);
+    this.deletedEventIds.add(id);
+    this.save(STORAGE_KEYS.DELETED_EVENT_IDS, Array.from(this.deletedEventIds));
+
     this.events = this.events.filter(e => e.id !== id);
     this.save(STORAGE_KEYS.EVENTS, this.events);
     this.syncApi(`/api/events?id=${encodeURIComponent(id)}`, 'DELETE');

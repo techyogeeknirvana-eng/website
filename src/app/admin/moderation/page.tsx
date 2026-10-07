@@ -76,13 +76,18 @@ export default function ModerationQueuePage() {
 
       const eventMap = new Map<string, CommunityEvent>();
       dbStore.getEvents(true).forEach(e => eventMap.set(e.id, e));
-      if (eventsApproved.status === 'fulfilled' && eventsApproved.value?.data) {
-        eventsApproved.value.data.forEach(e => eventMap.set(e.id, e));
+      if (eventsApproved.status === 'fulfilled' && eventsApproved.value) {
+        if ((eventsApproved.value as any).deletedIds) {
+          ((eventsApproved.value as any).deletedIds as string[]).forEach(id => dbStore.markEventDeleted(id));
+        }
+        if (eventsApproved.value.data) {
+          eventsApproved.value.data.forEach(e => eventMap.set(e.id, e));
+        }
       }
       if (eventsPending.status === 'fulfilled' && eventsPending.value?.data) {
         eventsPending.value.data.forEach(e => eventMap.set(e.id, e));
       }
-      const allEvents = Array.from(eventMap.values());
+      const allEvents = Array.from(eventMap.values()).filter(e => !dbStore.getDeletedEventIds().includes(e.id));
       setEvents(allEvents);
       dbStore.setEvents(allEvents);
 
@@ -240,8 +245,8 @@ export default function ModerationQueuePage() {
     if (!currentUser) return;
     if (!confirm('Are you sure you want to permanently delete this event?')) return;
     soundEffects.playClick();
-    await api.events.delete(id);
     dbStore.deleteEvent(id, currentUser);
+    await api.events.delete(id);
     await refreshData();
   };
 

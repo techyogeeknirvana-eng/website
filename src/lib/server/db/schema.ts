@@ -409,4 +409,15 @@ CREATE TABLE IF NOT EXISTS collab_requests (
   status TEXT NOT NULL DEFAULT 'open',
   created_at TEXT NOT NULL
 );
+
+-- 26. Deleted Entities Log for Resilient Cross-Client Sync
+CREATE TABLE IF NOT EXISTS deleted_events (
+  id TEXT PRIMARY KEY,
+  deleted_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS deleted_opportunities (
+  id TEXT PRIMARY KEY,
+  deleted_at TEXT NOT NULL
+);
 `;

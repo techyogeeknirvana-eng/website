@@ -317,6 +317,20 @@ export async function runMigrations(): Promise<void> {
         ]);
       }
     }
+
+    // Ensure deletion tracking tables exist
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS deleted_events (
+        id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL
+      )
+    `);
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS deleted_opportunities (
+        id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL
+      )
+    `);
   } catch (err) {
     console.warn('Migration hook skipped/deferred:', err);
   }

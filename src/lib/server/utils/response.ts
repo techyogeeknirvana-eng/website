@@ -43,13 +43,15 @@ export function apiError(
 export function apiPaginated<T>(
   items: T[],
   meta: PaginationMeta,
-  status = 200
+  status = 200,
+  extra?: Record<string, any>
 ) {
   return NextResponse.json(
     {
       success: true,
       data: items,
       pagination: meta,
+      ...(extra || {}),
     },
     {
       status,

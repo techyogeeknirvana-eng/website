@@ -235,7 +235,7 @@ export default function SubmitEventPage() {
     );
 
     try {
-      await api.events.create({
+      const res = await api.events.create({
         ...addedEvent,
         postedByUserId: currentUser.id,
         userEmail: currentUser.email,
@@ -247,6 +247,9 @@ export default function SubmitEventPage() {
           role: currentUser.role,
         },
       });
+      if (res.data) {
+        dbStore.setEvents([res.data]);
+      }
     } catch (err) {
       console.warn('Backend event creation warning:', err);
     } finally {
