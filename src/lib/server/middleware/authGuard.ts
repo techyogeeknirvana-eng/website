@@ -37,6 +37,12 @@ export function verifyAuthToken(token: string): TokenPayload | null {
   }
 }
 
+export function isGlobalAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return clean === 'techyogeeknirvana@gmail.com' || clean === 'ishpreet823@gmail.com';
+}
+
 export async function extractAuthUser(request: NextRequest, allowSuspended: boolean = false): Promise<User | null> {
   try {
     await ensureDbReady();
@@ -108,11 +114,12 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
         const { userService } = await import('../services/userService');
         const email = (userEmailHeader || `${userIdHeader || 'user'}@tygn.dev`).toLowerCase().trim();
         const displayName = formatNameFromEmail(email);
+        const isAdmin = isGlobalAdminEmail(email) || userIdHeader === 'user_lead_admin';
         await userService.ensureUserInDb({
           id: userIdHeader || `user_${Date.now()}`,
           email,
           name: displayName,
-          role: 'USER',
+          role: isAdmin ? 'ADMIN' : 'USER',
           username: email.split('@')[0].replace(/[^a-z0-9_]/g, '') || 'user',
         });
         targetRow = await db.queryOne('SELECT * FROM users WHERE id = ? OR LOWER(email) = ?', [
@@ -127,13 +134,14 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
   if (!targetRow && verifiedPayload && verifiedPayload.userId && verifiedPayload.email) {
     const cleanEmail = verifiedPayload.email.toLowerCase().trim();
     const displayName = formatNameFromEmail(cleanEmail);
+    const isAdmin = isGlobalAdminEmail(cleanEmail) || verifiedPayload.userId === 'user_lead_admin' || verifiedPayload.role === 'ADMIN';
     return {
       id: verifiedPayload.userId,
       name: displayName,
       username: cleanEmail.split('@')[0].replace(/[^a-z0-9_]/g, '') || 'user',
       email: cleanEmail,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0284c7&color=fff&bold=true`,
-      role: verifiedPayload.role || 'USER',
+      role: isAdmin ? 'ADMIN' : 'USER',
       title: 'Developer & Member',
       collegeOrCompany: 'Techyogeek Nirvana Community',
       education: 'B.Tech / Computer Science',
@@ -158,13 +166,15 @@ export async function extractAuthUser(request: NextRequest, allowSuspended: bool
   if (!targetRow) return null;
   if (targetRow.is_suspended === 1 && !allowSuspended) return null;
 
+  const isRowAdmin = isGlobalAdminEmail(targetRow.email) || targetRow.id === 'user_lead_admin' || targetRow.role === 'ADMIN';
+
   return {
     id: targetRow.id,
     name: targetRow.name,
     username: targetRow.username,
     email: targetRow.email,
     avatar: targetRow.avatar,
-    role: targetRow.role,
+    role: isRowAdmin ? 'ADMIN' : 'USER',
     title: targetRow.title || '',
     collegeOrCompany: targetRow.college_or_company || '',
     education: targetRow.education || '',

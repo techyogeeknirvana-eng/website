@@ -90,11 +90,18 @@ function EventsContent() {
 
     const interval = setInterval(loadData, 4000);
     const onFocus = () => { loadData(); };
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === 'tygn_events') {
+        loadData();
+      }
+    };
     window.addEventListener('focus', onFocus);
+    window.addEventListener('storage', onStorage);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', onStorage);
     };
   }, [currentUser, isAdmin]);
 

@@ -210,7 +210,13 @@ export async function runMigrations(): Promise<void> {
       await db.execute('ALTER TABLE community_events ADD COLUMN poster_url TEXT');
     } catch (_) {}
     try {
-      await db.execute("UPDATE community_events SET status = 'approved' WHERE status = 'pending' OR status IS NULL");
+      await db.execute("UPDATE community_events SET status = 'approved' WHERE (status = 'pending' OR status IS NULL) AND deleted_at IS NULL");
+    } catch (_) {}
+    try {
+      await db.execute("DELETE FROM community_events WHERE deleted_at IS NOT NULL");
+    } catch (_) {}
+    try {
+      await db.execute("UPDATE users SET role = 'ADMIN' WHERE LOWER(email) = 'techyogeeknirvana@gmail.com' OR id = 'user_lead_admin'");
     } catch (_) {}
 
     // Seed Collab Requests if table is empty

@@ -763,25 +763,9 @@ class DataStore {
   public setEvents(serverEvents: CommunityEvent[]): void {
     if (!Array.isArray(serverEvents)) return;
 
-    // Use a map to preserve local pending events and merge server events
-    const eventMap = new Map<string, CommunityEvent>();
-
-    // 1. First add current local events so pending submissions are not wiped out
-    for (const evt of this.events) {
-      if (evt && evt.id) {
-        eventMap.set(evt.id, evt);
-      }
-    }
-
-    // 2. Overwrite / merge with incoming server events
-    for (const sEvt of serverEvents) {
-      if (sEvt && sEvt.id) {
-        eventMap.set(sEvt.id, sEvt);
-      }
-    }
-
-    // 3. Keep ordered: newest first
-    this.events = Array.from(eventMap.values()).sort((a, b) => {
+    // The server is the single source of truth for active community events.
+    // When an event is removed or rejected by an admin, it must NOT be revived from local storage.
+    this.events = [...serverEvents].sort((a, b) => {
       const dateA = new Date(a.createdAt || a.date || 0).getTime();
       const dateB = new Date(b.createdAt || b.date || 0).getTime();
       return dateB - dateA;
@@ -864,8 +848,6 @@ class DataStore {
 
   public deleteEvent(id: string, adminUser: User): boolean {
     const event = this.getEvent(id);
-    if (!event) return false;
-
     this.events = this.events.filter(e => e.id !== id);
     this.save(STORAGE_KEYS.EVENTS, this.events);
     this.syncApi(`/api/events?id=${encodeURIComponent(id)}`, 'DELETE');
@@ -879,7 +861,7 @@ class DataStore {
       action: 'DELETE_EVENT',
       targetType: 'event',
       targetId: id,
-      details: `Deleted event "${event.title}"`,
+      details: `Deleted event "${event?.title || id}"`,
       status: 'warning'
     });
 

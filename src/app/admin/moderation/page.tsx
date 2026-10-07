@@ -64,7 +64,7 @@ export default function ModerationQueuePage() {
       if (oppsPending.status === 'fulfilled' && oppsPending.value?.data) {
         oppsPending.value.data.forEach(o => oppMap.set(o.id, o));
       }
-      if (oppMap.size === 0) {
+      if (oppsApproved.status !== 'fulfilled' && oppsPending.status !== 'fulfilled') {
         dbStore.getOpportunities(true).forEach(o => oppMap.set(o.id, o));
       }
       const allOpps = Array.from(oppMap.values());
@@ -78,7 +78,7 @@ export default function ModerationQueuePage() {
       if (eventsPending.status === 'fulfilled' && eventsPending.value?.data) {
         eventsPending.value.data.forEach(e => eventMap.set(e.id, e));
       }
-      if (eventMap.size === 0) {
+      if (eventsApproved.status !== 'fulfilled' && eventsPending.status !== 'fulfilled') {
         dbStore.getEvents(true).forEach(e => eventMap.set(e.id, e));
       }
       const allEvents = Array.from(eventMap.values());
@@ -89,7 +89,7 @@ export default function ModerationQueuePage() {
       if (momentsAll.status === 'fulfilled' && momentsAll.value?.data) {
         momentsAll.value.data.forEach(m => momentMap.set(m.id, m));
       }
-      if (momentMap.size === 0) {
+      if (momentsAll.status !== 'fulfilled') {
         dbStore.getMoments(true).forEach(m => momentMap.set(m.id, m));
       }
       const allMoments = Array.from(momentMap.values());
@@ -100,7 +100,7 @@ export default function ModerationQueuePage() {
       if (projAll.status === 'fulfilled' && projAll.value?.data) {
         projAll.value.data.forEach(p => projMap.set(p.id, p));
       }
-      if (projMap.size === 0) {
+      if (projAll.status !== 'fulfilled') {
         dbStore.getProjects(true).forEach(p => projMap.set(p.id, p));
       }
       const allProjects = Array.from(projMap.values());

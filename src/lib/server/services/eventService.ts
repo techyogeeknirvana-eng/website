@@ -213,8 +213,11 @@ export const eventService = {
   async deleteEvent(id: string, adminUser: User): Promise<boolean> {
     const now = new Date().toISOString();
     const target = await this.getEventById(id);
-    const result = await db.execute('UPDATE community_events SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
-    if (result.rowCount > 0) {
+    await db.execute("UPDATE community_events SET deleted_at = ?, status = 'rejected', updated_at = ? WHERE id = ?", [now, now, id]);
+    await db.execute('DELETE FROM community_events WHERE id = ?', [id]);
+    await db.execute('DELETE FROM event_registrations WHERE event_id = ?', [id]);
+
+    try {
       await db.execute(`
         INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -230,9 +233,8 @@ export const eventService = {
         `Deleted event "${target?.title || id}" by "${target?.organizer || 'N/A'}"`,
         'warning'
       ]);
-      return true;
-    }
-    return false;
+    } catch (_) {}
+    return true;
   },
 
   async updateEvent(id: string, updates: Partial<CommunityEvent>, adminUser: User): Promise<CommunityEvent> {
