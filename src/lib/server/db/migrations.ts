@@ -202,6 +202,14 @@ export async function runMigrations(): Promise<void> {
       await db.execute('ALTER TABLE collab_requests ADD COLUMN organizer_avatar TEXT');
     } catch (_) {}
 
+    // Ensure community_events schema compatibility columns
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN event_website_url TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN poster_url TEXT');
+    } catch (_) {}
+
     // Seed Collab Requests if table is empty
     const collabCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM collab_requests');
     if (!collabCount || Number(collabCount.count) === 0) {

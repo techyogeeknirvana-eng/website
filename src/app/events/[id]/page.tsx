@@ -373,39 +373,61 @@ export default function EventDetailPage() {
               </div>
 
               <div className="space-y-2.5">
-                {/* Free RSVP Registration */}
-                <button
-                  onClick={handleRegister}
-                  className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                    isRegistered
-                      ? 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-                      : 'btn-primary'
-                  }`}
-                >
-                  {isRegistered ? (
-                    <>
-                      <CheckCircle2 size={16} />
-                      <span>Registered (Click to cancel)</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      <span>RSVP for Free (+40 XP)</span>
-                    </>
-                  )}
-                </button>
+                {/* Primary Action: Register Now opening external URL */}
+                {(() => {
+                  const regUrl = (event.registrationUrl || event.eventWebsiteUrl || '').trim();
+                  const hasValidUrl = Boolean(regUrl && (regUrl.startsWith('http://') || regUrl.startsWith('https://')));
 
-                {/* External Registration Link if present */}
-                {event.registrationUrl && (
+                  if (hasValidUrl) {
+                    return (
+                      <a
+                        href={regUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          soundEffects.playSuccess();
+                          if (currentUser && !isRegistered) {
+                            handleRegister();
+                          }
+                        }}
+                        className="w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all btn-primary no-underline text-black shadow-[0_0_25px_rgba(255,255,255,0.2)]"
+                      >
+                        <span>Register Now</span>
+                        <ExternalLink size={15} />
+                      </a>
+                    );
+                  }
+
+                  return (
+                    <button
+                      disabled
+                      className="w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-white/10 bg-white/5 text-[#737373] cursor-not-allowed"
+                    >
+                      <span>Registration Link Unavailable</span>
+                    </button>
+                  );
+                })()}
+
+                {/* Visit Event Website if different from registrationUrl */}
+                {event.eventWebsiteUrl && event.eventWebsiteUrl.trim() !== event.registrationUrl?.trim() && (
                   <a
-                    href={event.registrationUrl}
+                    href={event.eventWebsiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => soundEffects.playClick()}
                     className="w-full py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white hover:text-black transition-all text-xs font-semibold text-center flex items-center justify-center gap-2 no-underline text-inherit"
                   >
-                    <span>Official Portal</span>
+                    <span>Visit Event Website</span>
                     <ExternalLink size={13} />
                   </a>
+                )}
+
+                {/* Secondary RSVP Status Badge */}
+                {currentUser && isRegistered && (
+                  <div className="text-[0.72rem] font-mono text-emerald-400 text-center flex items-center justify-center gap-1.5 pt-1">
+                    <CheckCircle2 size={13} />
+                    <span>Added to your TYGN RSVP schedule (+40 XP)</span>
+                  </div>
                 )}
               </div>
 

@@ -352,6 +352,29 @@ export function AdminEditModal({ isOpen, onClose, type, item, onSave }: AdminEdi
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
+                  <label className="label-custom">Registration URL *</label>
+                  <input
+                    type="url"
+                    value={formData.registrationUrl || ''}
+                    onChange={e => handleChange('registrationUrl', e.target.value)}
+                    className="input-custom"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="label-custom">Event Website URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={formData.eventWebsiteUrl || ''}
+                    onChange={e => handleChange('eventWebsiteUrl', e.target.value)}
+                    className="input-custom"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
                   <label className="label-custom">Location / Venue</label>
                   <input
                     type="text"
@@ -361,20 +384,35 @@ export function AdminEditModal({ isOpen, onClose, type, item, onSave }: AdminEdi
                   />
                 </div>
                 <div>
-                  <label className="label-custom">Registration URL</label>
+                  <label className="label-custom">Registration Deadline</label>
                   <input
-                    type="url"
-                    value={formData.registrationUrl || ''}
-                    onChange={e => handleChange('registrationUrl', e.target.value)}
+                    type="text"
+                    value={formData.registrationDeadline || ''}
+                    onChange={e => handleChange('registrationDeadline', e.target.value)}
                     className="input-custom"
+                    placeholder="e.g. 2026-04-12"
                   />
                 </div>
               </div>
 
               <div>
+                <label className="label-custom">Relevant Skills / Tags (comma separated)</label>
+                <input
+                  type="text"
+                  value={Array.isArray(formData.skills) ? formData.skills.join(', ') : (formData.skills || '')}
+                  onChange={e => handleSkillsChange(e.target.value)}
+                  className="input-custom"
+                  placeholder="React, Next.js, AI, Full Stack"
+                />
+              </div>
+
+              <div>
                 <EventPosterUpload
-                  value={formData.bannerImage || ''}
-                  onChange={(url) => handleChange('bannerImage', url)}
+                  value={formData.bannerImage || formData.posterUrl || ''}
+                  onChange={(url) => {
+                    handleChange('bannerImage', url);
+                    handleChange('posterUrl', url);
+                  }}
                 />
               </div>
 

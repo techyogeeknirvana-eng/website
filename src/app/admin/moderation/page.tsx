@@ -785,6 +785,37 @@ export default function ModerationQueuePage() {
                         <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           Organizer: {evt.organizer} • Date: {evt.date} • Submitter: {evt.postedBy.name}
                         </div>
+
+                        {/* Clickable Links for Admin Verification */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '0.78rem' }}>
+                          {evt.registrationUrl ? (
+                            <a
+                              href={evt.registrationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-mono hover:underline"
+                              style={{ color: 'var(--accent-cyan)', textDecoration: 'none' }}
+                            >
+                              <span>Verify Link: {evt.registrationUrl.length > 45 ? evt.registrationUrl.slice(0, 42) + '...' : evt.registrationUrl}</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          ) : (
+                            <span style={{ color: '#ef4444', fontStyle: 'italic' }}>No registration link provided</span>
+                          )}
+
+                          {evt.eventWebsiteUrl && evt.eventWebsiteUrl !== evt.registrationUrl && (
+                            <a
+                              href={evt.eventWebsiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-mono hover:underline"
+                              style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
+                            >
+                              <span>Website: {evt.eventWebsiteUrl.length > 35 ? evt.eventWebsiteUrl.slice(0, 32) + '...' : evt.eventWebsiteUrl}</span>
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -1000,6 +1031,20 @@ export default function ModerationQueuePage() {
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           Organizer: {evt.organizer} • Date: {evt.date} • Submitted by: {evt.postedBy.name}
                         </div>
+                        {evt.registrationUrl && (
+                          <div style={{ marginTop: '4px', fontSize: '0.76rem' }}>
+                            <a
+                              href={evt.registrationUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-mono hover:underline"
+                              style={{ color: 'var(--accent-cyan)', textDecoration: 'none' }}
+                            >
+                              <span>Link: {evt.registrationUrl.length > 40 ? evt.registrationUrl.slice(0, 37) + '...' : evt.registrationUrl}</span>
+                              <ExternalLink size={11} />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
 

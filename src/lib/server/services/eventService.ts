@@ -42,10 +42,12 @@ export const eventService = {
       description: row.description,
       eligibility: row.eligibility || 'Open to all students',
       skills: safeParseJson(row.skills, []),
-      registrationUrl: row.registration_url,
+      registrationUrl: row.registration_url || row.event_website_url || '',
+      eventWebsiteUrl: row.event_website_url || undefined,
+      posterUrl: row.poster_url || row.banner_image || undefined,
       participantsCount: registrations.length + (row.max_participants ? Math.min(row.max_participants, 15) : 10),
       maxParticipants: row.max_participants || undefined,
-      bannerImage: row.banner_image || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+      bannerImage: row.poster_url || row.banner_image || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
       postedBy: {
         id: row.poster_id,
         name: row.poster_name,
@@ -124,9 +126,9 @@ export const eventService = {
       INSERT INTO community_events (
         id, title, category, organizer, organizer_logo, date, time, location,
         is_online, registration_deadline, description, eligibility, skills,
-        registration_url, max_participants, banner_image, posted_by_user_id,
+        registration_url, event_website_url, poster_url, max_participants, banner_image, posted_by_user_id,
         status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       data.title || 'Untitled Community Event',
@@ -141,9 +143,11 @@ export const eventService = {
       data.description || '',
       data.eligibility || 'Open to all students',
       JSON.stringify(data.skills || []),
-      data.registrationUrl || 'https://nirvana.community',
+      data.registrationUrl || data.eventWebsiteUrl || '',
+      data.eventWebsiteUrl || null,
+      data.posterUrl || data.bannerImage || null,
       data.maxParticipants || null,
-      data.bannerImage || null,
+      data.bannerImage || data.posterUrl || null,
       user.id,
       status,
       now,
@@ -251,6 +255,8 @@ export const eventService = {
         eligibility = ?,
         skills = ?,
         registration_url = ?,
+        event_website_url = ?,
+        poster_url = ?,
         max_participants = ?,
         banner_image = ?,
         status = ?,
@@ -269,9 +275,11 @@ export const eventService = {
       updated.description,
       updated.eligibility || 'Open to all',
       JSON.stringify(updated.skills || []),
-      updated.registrationUrl,
+      updated.registrationUrl || updated.eventWebsiteUrl || '',
+      updated.eventWebsiteUrl || null,
+      updated.posterUrl || updated.bannerImage || null,
       updated.maxParticipants || null,
-      updated.bannerImage || null,
+      updated.bannerImage || updated.posterUrl || null,
       updated.status,
       now,
       id
@@ -295,5 +303,24 @@ export const eventService = {
 
     const evt = await this.getEventById(id);
     return evt!;
+  },
+
+  async checkDuplicateRegistrationUrl(url: string, excludeId?: string): Promise<{ isDuplicate: boolean; matchedEvent?: { id: string; title: string } }> {
+    if (!url || !url.trim()) return { isDuplicate: false };
+    const cleanUrl = url.trim().toLowerCase().replace(/\/+$/, '');
+    const rows = await db.queryAll<{ id: string; title: string; registration_url: string; event_website_url: string }>(`
+      SELECT id, title, registration_url, event_website_url FROM community_events
+      WHERE deleted_at IS NULL
+    `);
+    const found = rows.find(r => {
+      if (excludeId && r.id === excludeId) return false;
+      const reg = (r.registration_url || '').trim().toLowerCase().replace(/\/+$/, '');
+      const web = (r.event_website_url || '').trim().toLowerCase().replace(/\/+$/, '');
+      return (reg && reg === cleanUrl) || (web && web === cleanUrl);
+    });
+    return {
+      isDuplicate: Boolean(found),
+      matchedEvent: found ? { id: found.id, title: found.title } : undefined,
+    };
   },
 };

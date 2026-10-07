@@ -207,6 +207,16 @@ export const api = {
       request<{ success: boolean; message: string }>(`/api/events?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
       }),
+    extract: (url: string) =>
+      request<{
+        success: boolean;
+        warning?: string | null;
+        data?: Partial<CommunityEvent>;
+        duplicateWarning?: { message: string; matchedEvent?: { id: string; title: string } } | null;
+      }>('/api/events/extract', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
   },
 
   // Community Chat

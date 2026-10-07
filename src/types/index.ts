@@ -83,6 +83,8 @@ export interface CommunityEvent {
   eligibility: string;
   skills: string[];
   registrationUrl: string;
+  eventWebsiteUrl?: string;
+  posterUrl?: string;
   participantsCount: number;
   maxParticipants?: number;
   bannerImage: string;

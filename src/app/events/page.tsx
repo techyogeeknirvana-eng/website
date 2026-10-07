@@ -369,19 +369,58 @@ export default function EventsPage() {
                     Deadline: {evt.registrationDeadline}
                   </span>
 
-                  <button
-                    onClick={e => handleRegister(evt.id, e)}
-                    className={isRegistered ? 'btn-success' : 'btn-primary'}
-                    style={{ padding: '8px 16px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)' }}
-                  >
-                    {isRegistered ? (
-                      <>
-                        <Check size={14} /> Registered
-                      </>
-                    ) : (
-                      'Register Now'
-                    )}
-                  </button>
+                  {(() => {
+                    const regUrl = (evt.registrationUrl || evt.eventWebsiteUrl || '').trim();
+                    const hasValidUrl = Boolean(regUrl && (regUrl.startsWith('http://') || regUrl.startsWith('https://')));
+
+                    if (hasValidUrl) {
+                      return (
+                        <a
+                          href={regUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            soundEffects.playClick();
+                            if (currentUser && !isRegistered) {
+                              handleRegister(evt.id, e);
+                            }
+                          }}
+                          className={isRegistered ? 'btn-success' : 'btn-primary'}
+                          style={{
+                            padding: '8px 16px',
+                            fontSize: '0.82rem',
+                            borderRadius: 'var(--radius-sm)',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          {isRegistered ? <Check size={14} /> : null}
+                          <span>Register Now</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      );
+                    }
+
+                    return (
+                      <button
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                        className="btn-ghost"
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '0.78rem',
+                          borderRadius: 'var(--radius-sm)',
+                          opacity: 0.5,
+                          cursor: 'not-allowed'
+                        }}
+                      >
+                        Registration Link Unavailable
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Admin Direct Controls on Card */}
@@ -581,16 +620,56 @@ export default function EventsPage() {
                   </a>
                 </div>
 
-                <button
-                  onClick={e => {
-                    handleRegister(selectedEventModal.id, e);
-                    setSelectedEventModal(null);
-                  }}
-                  className={registeredIds.includes(selectedEventModal.id) ? 'btn-success' : 'btn-primary'}
-                  style={{ padding: '10px 24px' }}
-                >
-                  {registeredIds.includes(selectedEventModal.id) ? 'Registered (Click to cancel)' : 'Register for Free (+40 XP)'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {(() => {
+                    const regUrl = (selectedEventModal.registrationUrl || selectedEventModal.eventWebsiteUrl || '').trim();
+                    const hasValidUrl = Boolean(regUrl && (regUrl.startsWith('http://') || regUrl.startsWith('https://')));
+
+                    if (hasValidUrl) {
+                      return (
+                        <a
+                          href={regUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => {
+                            soundEffects.playClick();
+                            if (currentUser && !registeredIds.includes(selectedEventModal.id)) {
+                              dbStore.toggleRegisterEvent(selectedEventModal.id, currentUser.id);
+                              setRegisteredIds(prev => [...prev, selectedEventModal.id]);
+                            }
+                          }}
+                          className="btn-primary"
+                          style={{
+                            padding: '10px 22px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: 700
+                          }}
+                        >
+                          <span>Register Now</span>
+                          <ExternalLink size={14} />
+                        </a>
+                      );
+                    }
+
+                    return (
+                      <button
+                        disabled
+                        className="btn-ghost"
+                        style={{
+                          padding: '10px 18px',
+                          opacity: 0.5,
+                          cursor: 'not-allowed',
+                          fontSize: '0.82rem'
+                        }}
+                      >
+                        Registration Link Unavailable
+                      </button>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
