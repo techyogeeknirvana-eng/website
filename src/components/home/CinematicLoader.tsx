@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 export function CinematicLoader() {
+  const { isDark } = useThemeCustomizer();
   const [phase, setPhase] = useState<'init' | 'zero' | 'one' | 'logo' | 'complete'>('init');
   const [visible, setVisible] = useState(true);
 
@@ -41,9 +43,13 @@ export function CinematicLoader() {
   return (
     <div
       onClick={handleSkip}
-      className={`fixed inset-0 z-[999999] bg-[#000000] flex flex-col items-center justify-center cursor-pointer transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[999999] flex flex-col items-center justify-center cursor-pointer transition-opacity duration-300 ${
         phase === 'complete' ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
+      style={{
+        background: isDark ? '#000000' : '#ffffff',
+        color: isDark ? '#ffffff' : '#000000',
+      }}
       title="Click anywhere to skip"
     >
       {/* Background subtle micro-grid */}
@@ -59,13 +65,19 @@ export function CinematicLoader() {
         {/* Step Indicator */}
         <div className="h-16 flex items-center justify-center">
           {phase === 'zero' && (
-            <span className="font-mono font-black text-6xl text-white/50 animate-pulse tracking-widest">
+            <span 
+              className="font-mono font-black text-6xl animate-pulse tracking-widest"
+              style={{ color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)' }}
+            >
               0
             </span>
           )}
 
           {phase === 'one' && (
-            <span className="font-mono font-black text-6xl text-white animate-pulse tracking-widest">
+            <span 
+              className="font-mono font-black text-6xl animate-pulse tracking-widest"
+              style={{ color: isDark ? '#ffffff' : '#000000' }}
+            >
               1
             </span>
           )}
@@ -80,7 +92,7 @@ export function CinematicLoader() {
                 />
               </div>
               <div className="flex flex-col items-center">
-                <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-white leading-none flex items-center gap-2">
+                <span className="font-display font-black text-xl sm:text-2xl tracking-tight text-inherit leading-none flex items-center gap-2">
                   TechYOGeek Nirvana
                   <span className="text-xs font-mono px-1.5 py-0.5 rounded border border-white/20 text-[#a3a3a3] font-normal tracking-wider">(TYGN)</span>
                 </span>

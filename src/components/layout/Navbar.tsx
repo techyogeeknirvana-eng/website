@@ -28,7 +28,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { currentUser, isAuthenticated, isAdmin, wallet, logout } = useAuth();
-  const { isDark, toggleTheme, setIsCustomizerOpen } = useThemeCustomizer();
+  const { isDark, toggleTheme, setIsCustomizerOpen, preferences } = useThemeCustomizer();
   
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -182,8 +182,37 @@ export function Navbar() {
             </button>
           </nav>
 
-          {/* 5, 6. Right Controls: Search & Profile / Account Icon */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* 5, 6. Right Controls: Settings, Search & Profile / Account Icon */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            {/* Settings Trigger (Font Colors, Dev Mode, Themes) */}
+            <button
+              onClick={() => {
+                soundEffects.playClick();
+                setIsCustomizerOpen(true);
+              }}
+              title="Interface Settings (Font Color, Dev Mode & Themes)"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-xs transition-all hover:scale-105"
+              style={{
+                borderColor: preferences?.devMode 
+                  ? '#10b981' 
+                  : (isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'),
+                background: preferences?.devMode 
+                  ? 'rgba(16, 185, 129, 0.12)' 
+                  : (isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)'),
+                color: preferences?.devMode 
+                  ? '#10b981' 
+                  : (isDark ? '#d4d4d4' : '#525252'),
+              }}
+            >
+              <Settings size={13} className={preferences?.devMode ? 'text-emerald-400' : ''} />
+              <span className="hidden sm:inline text-xs font-medium">Settings</span>
+              {preferences?.devMode && (
+                <span className="text-[0.62rem] font-mono px-1 rounded bg-emerald-500/20 text-emerald-400 font-bold">
+                  DEV
+                </span>
+              )}
+            </button>
+
             {/* Search Trigger (Always accessible Cmd+K) */}
             <button
               onClick={handleOpenSearch}
@@ -197,7 +226,7 @@ export function Navbar() {
             >
               <Search size={13} />
               <span className="hidden sm:inline text-xs font-medium">Search</span>
-              <span className="hidden md:inline text-[0.65rem] font-mono px-1 rounded bg-white/10 dark:bg-white/10 light:bg-black/10 opacity-70">
+              <span className="hidden md:inline text-[0.65rem] font-mono px-1 rounded bg-white/10 opacity-70">
                 ⌘K
               </span>
             </button>
@@ -466,6 +495,26 @@ export function Navbar() {
                   <span>Search</span>
                 </span>
                 <span className="text-[10px] font-mono opacity-60">⌘K</span>
+              </button>
+
+              {/* Interface Settings & Dev Mode */}
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  soundEffects.playClick();
+                  setIsCustomizerOpen(true);
+                }}
+                className="w-full font-display font-bold text-lg py-3 px-4 rounded-xl flex items-center justify-between text-neutral-300 hover:text-white hover:bg-white/5 transition-all text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <Settings size={18} className={preferences?.devMode ? 'text-emerald-400' : ''} />
+                  <span>Interface Settings</span>
+                </span>
+                <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                  preferences?.devMode ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' : 'border-white/20'
+                }`}>
+                  {preferences?.devMode ? 'DEV ACTIVE' : 'CUSTOMIZE'}
+                </span>
               </button>
             </div>
           </div>

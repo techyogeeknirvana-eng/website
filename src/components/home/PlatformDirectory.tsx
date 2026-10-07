@@ -25,6 +25,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 import { soundEffects } from '@/lib/audio/soundEffects';
 
 interface DirectoryItem {
@@ -48,6 +49,7 @@ interface DirectoryPillar {
 
 export function PlatformDirectory() {
   const { isAuthenticated } = useAuth();
+  const { isDark } = useThemeCustomizer();
   const [activeTab, setActiveTab] = useState<string>('all');
 
   const pillars: DirectoryPillar[] = [
@@ -258,8 +260,12 @@ export function PlatformDirectory() {
               }}
               className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border transition-all ${
                 activeTab === tab.id
-                  ? 'bg-white text-black border-white shadow-sm'
-                  : 'bg-white/5 border-white/10 text-[#a3a3a3] hover:text-white hover:border-white/20'
+                  ? isDark
+                    ? 'bg-white text-black border-white shadow-sm'
+                    : 'bg-black text-white border-black shadow-sm'
+                  : isDark
+                    ? 'bg-white/5 border-white/10 text-[#a3a3a3] hover:text-white hover:border-white/20'
+                    : 'bg-black/5 border-black/10 text-[#52525b] hover:text-black hover:border-black/20'
               }`}
             >
               {tab.label}
@@ -301,7 +307,9 @@ export function PlatformDirectory() {
                   >
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="w-10 h-10 rounded-xl border border-white/15 bg-white/5 flex items-center justify-center text-inherit group-hover:scale-110 transition-transform">
+                        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center text-inherit group-hover:scale-110 transition-transform ${
+                          isDark ? 'border-white/15 bg-white/5' : 'border-black/10 bg-black/5'
+                        }`}>
                           <IconComponent size={18} />
                         </div>
                         <span className="mono-badge text-[0.62rem] py-0.5 px-2">
@@ -310,16 +318,18 @@ export function PlatformDirectory() {
                       </div>
 
                       <div className="space-y-2">
-                        <h4 className="font-display font-bold text-base sm:text-lg text-inherit group-hover:text-white transition-colors">
+                        <h4 className={`font-display font-bold text-base sm:text-lg text-inherit transition-colors ${
+                          isDark ? 'group-hover:text-white' : 'group-hover:text-black'
+                        }`}>
                           {item.title}
                         </h4>
-                        <p className="text-xs text-[#737373] dark:text-[#a3a3a3] light:text-[#525252] leading-relaxed line-clamp-3">
+                        <p className="text-xs text-[#737373] dark:text-[#a3a3a3] leading-relaxed line-clamp-3">
                           {item.description}
                         </p>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-white/10 dark:border-white/10 light:border-black/10 flex items-center justify-between">
+                    <div className="pt-4 border-t border-white/10 flex items-center justify-between">
                       <span className="text-[0.68rem] font-mono text-[#737373] flex items-center gap-1">
                         {requiresAuth && <Lock size={11} />}
                         <span>{requiresAuth ? 'Requires Sign In' : 'Direct Access'}</span>
@@ -328,7 +338,9 @@ export function PlatformDirectory() {
                       <Link
                         href={targetHref}
                         onClick={() => soundEffects.playClick()}
-                        className="btn btn-outline text-xs py-1.5 px-3 font-semibold inline-flex items-center gap-1.5 no-underline text-inherit group-hover:bg-white group-hover:text-black transition-all"
+                        className={`btn btn-outline text-xs py-1.5 px-3 font-semibold inline-flex items-center gap-1.5 no-underline text-inherit transition-all ${
+                          isDark ? 'group-hover:bg-white group-hover:text-black' : 'group-hover:bg-black group-hover:text-white'
+                        }`}
                       >
                         <span>{item.ctaText}</span>
                         <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />

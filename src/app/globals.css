@@ -109,6 +109,166 @@
   --shadow-glow: 0 0 25px rgba(0, 0, 0, 0.06);
 }
 
+/* ==========================================================================
+   DYNAMIC LIGHT THEME ADAPTATION & VISIBILITY GUARANTEES
+   Inverts hardcoded dark-mode tokens into crisp high-contrast light elements
+   ========================================================================== */
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Text Visibility in White Theme */
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-[#ffffff] {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .text-[#d4d4d4],
+[data-theme="light"] .text-[#e5e5e5] {
+  color: #171717 !important;
+}
+
+[data-theme="light"] .text-[#a3a3a3] {
+  color: #3f3f46 !important;
+}
+
+[data-theme="light"] .text-[#737373] {
+  color: #52525b !important;
+}
+
+[data-theme="light"] .text-[#525252] {
+  color: #71717a !important;
+}
+
+/* Hover & Group-Hover Text Inversions in White Theme */
+[data-theme="light"] .hover\:text-white:hover,
+[data-theme="light"] .group:hover .group-hover\:text-white {
+  color: #000000 !important;
+}
+
+/* Borders & Separator Lines in White Theme */
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-white\/8,
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/12,
+[data-theme="light"] .border-white\/15 {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+[data-theme="light"] .border-white\/20,
+[data-theme="light"] .border-white\/25,
+[data-theme="light"] .border-white\/30,
+[data-theme="light"] .border-white\/40,
+[data-theme="light"] .border-white\/50,
+[data-theme="light"] .border-white {
+  border-color: rgba(0, 0, 0, 0.22) !important;
+}
+
+[data-theme="light"] .hover\:border-white\/20:hover,
+[data-theme="light"] .hover\:border-white\/30:hover,
+[data-theme="light"] .group:hover .group-hover\:border-white\/30 {
+  border-color: rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Line Elements (e.g. w-12 h-px bg-white/20) */
+[data-theme="light"] .bg-white\/20,
+[data-theme="light"] .bg-white\/15,
+[data-theme="light"] .bg-white\/25 {
+  background-color: rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Background Card & Pill Inversions in White Theme */
+[data-theme="light"] .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+[data-theme="light"] .hover\:bg-white\/5:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .hover\:bg-white\/10:hover {
+  background-color: rgba(0, 0, 0, 0.09) !important;
+}
+
+/* Hardcoded Dark Background Classes Invert to Light */
+[data-theme="light"] .bg-black\/40,
+[data-theme="light"] .bg-black\/50,
+[data-theme="light"] .bg-black\/60,
+[data-theme="light"] .bg-black\/70,
+[data-theme="light"] .bg-black\/80,
+[data-theme="light"] .bg-black\/90,
+[data-theme="light"] .bg-black\/95 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .bg-\[\#000000\],
+[data-theme="light"] .bg-\[\#050505\],
+[data-theme="light"] .bg-\[\#0a0a0a\],
+[data-theme="light"] .bg-\[\#111111\],
+[data-theme="light"] .bg-\[\#171717\] {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .bg-black {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Subtle Grid for White Theme */
+[data-theme="light"] .subtle-grid,
+[data-theme="light"] .bg-cyber-grid,
+[data-theme="light"] .cyber-grid-bg {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.06) 1px, transparent 1px) !important;
+}
+
+/* Invert Pure White SVG Elements in White Theme */
+[data-theme="light"] svg.invert-on-light,
+[data-theme="light"] .invert-on-light {
+  filter: invert(1);
+}
+
+/* ==========================================================================
+   CUSTOM FONT COLOR & ACCENT SYSTEM
+   ========================================================================== */
+
+:root[data-custom-font="true"] {
+  --text-primary: var(--user-font-color);
+}
+
+:root[data-custom-font="true"] h1,
+:root[data-custom-font="true"] h2,
+:root[data-custom-font="true"] h3,
+:root[data-custom-font="true"] h4,
+:root[data-custom-font="true"] .font-display,
+:root[data-custom-font="true"] .editorial-title {
+  color: var(--user-font-color) !important;
+}
+
+:root[data-custom-font="true"] .text-gradient,
+:root[data-custom-font="true"] .text-gradient-premium,
+:root[data-custom-font="true"] .sheen-text {
+  background: linear-gradient(135deg, var(--user-font-color) 0%, rgba(255, 255, 255, 0.7) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* ==========================================================================
+   DEV MODE DEBUGGING OUTLINES
+   ========================================================================== */
+
+[data-dev-outlines="true"] * {
+  outline: 1px dashed rgba(239, 68, 68, 0.3) !important;
+}
+
 /* Base Resets & Global Styles */
 * {
   box-sizing: border-box;

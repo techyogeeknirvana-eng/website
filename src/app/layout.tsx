@@ -12,6 +12,7 @@ import { BroadcastModal } from '@/components/announcements/BroadcastModal';
 
 import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
 import { ThemeCustomizerModal } from '@/components/theme/ThemeCustomizerModal';
+import { DevModeHUD } from '@/components/dev/DevModeHUD';
 import { BreadcrumbBar } from '@/components/layout/BreadcrumbBar';
 
 export const metadata: Metadata = {
@@ -66,6 +67,7 @@ export default function RootLayout({
               <CommandPalette />
               <BroadcastModal />
               <ThemeCustomizerModal />
+              <DevModeHUD />
             </RouteGuard>
           </AuthProvider>
         </ThemeCustomizerProvider>

@@ -616,7 +616,13 @@ export function FeaturesDirectoryModal({
 
   // Full-page slide-down modal rendering
   return (
-    <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/95 backdrop-blur-2xl p-4 sm:p-8 pt-20 animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-[99999] overflow-y-auto backdrop-blur-2xl p-4 sm:p-8 pt-20 animate-fadeIn transition-colors"
+      style={{
+        background: isDark ? 'rgba(5, 5, 5, 0.96)' : 'rgba(255, 255, 255, 0.97)',
+        color: isDark ? '#ffffff' : '#050505',
+      }}
+    >
       {content}
     </div>
   );

@@ -56,7 +56,7 @@ export default function HomePage() {
             An institutional-grade technology ecosystem engineered for ambitious B.Tech builders who refuse to wait until graduation to ship production software, assemble hackathon squads, and master executive presence.
           </h2>
           <div className="flex justify-center pt-2">
-            <span className="w-12 h-px bg-white/20" />
+            <span className={`w-12 h-px ${isDark ? 'bg-white/20' : 'bg-black/20'}`} />
           </div>
         </div>
       </section>

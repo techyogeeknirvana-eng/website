@@ -21,6 +21,9 @@ interface ThemeCustomizerContextType {
   setDensity: (density: DensityChoice) => void;
   setMotion: (motion: MotionChoice) => void;
   setBackground: (background: BackgroundChoice) => void;
+  setFontColor: (color: string) => void;
+  setDevMode: (enabled: boolean) => void;
+  toggleDevMode: () => void;
   toggleTheme: () => void;
   resetToDefaults: () => void;
   isDark: boolean;
@@ -94,6 +97,24 @@ export function ThemeCustomizerProvider({ children }: { children: React.ReactNod
     // 5. Background mode
     root.setAttribute('data-bg-mode', preferences.background);
 
+    // 6. Custom font color
+    if (preferences.fontColor && preferences.fontColor !== 'default') {
+      root.setAttribute('data-custom-font', 'true');
+      root.style.setProperty('--user-font-color', preferences.fontColor);
+      root.style.setProperty('--text-primary', preferences.fontColor);
+    } else {
+      root.removeAttribute('data-custom-font');
+      root.style.removeProperty('--user-font-color');
+      root.style.setProperty('--text-primary', isDark ? '#ffffff' : '#050505');
+    }
+
+    // 7. Dev Mode
+    if (preferences.devMode) {
+      root.setAttribute('data-dev-mode', 'true');
+    } else {
+      root.removeAttribute('data-dev-mode');
+    }
+
     // Save to localStorage
     if (mounted) {
       try {
@@ -122,6 +143,18 @@ export function ThemeCustomizerProvider({ children }: { children: React.ReactNod
     setPreferences(prev => ({ ...prev, background }));
   };
 
+  const setFontColor = (fontColor: string) => {
+    setPreferences(prev => ({ ...prev, fontColor }));
+  };
+
+  const setDevMode = (devMode: boolean) => {
+    setPreferences(prev => ({ ...prev, devMode }));
+  };
+
+  const toggleDevMode = () => {
+    setPreferences(prev => ({ ...prev, devMode: !prev.devMode }));
+  };
+
   const toggleTheme = () => {
     setPreferences(prev => ({
       ...prev,
@@ -144,6 +177,9 @@ export function ThemeCustomizerProvider({ children }: { children: React.ReactNod
         setDensity,
         setMotion,
         setBackground,
+        setFontColor,
+        setDevMode,
+        toggleDevMode,
         toggleTheme,
         resetToDefaults,
         isDark,
