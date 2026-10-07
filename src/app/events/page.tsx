@@ -43,6 +43,7 @@ function EventsContent() {
   const { currentUser, isAdmin } = useAuth();
   const [events, setEvents] = useState<CommunityEvent[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [registeredIds, setRegisteredIds] = useState<string[]>([]);
   const [selectedEventModal, setSelectedEventModal] = useState<CommunityEvent | null>(null);
@@ -67,7 +68,7 @@ function EventsContent() {
   }, [urlCategory]);
 
   const loadData = async () => {
-    const evts = dbStore.getEvents();
+    const evts = dbStore.getEvents(isAdmin, currentUser?.id);
     setEvents(evts);
 
     if (currentUser) {
@@ -76,10 +77,14 @@ function EventsContent() {
     }
 
     try {
-      const res = await api.events.list({ limit: 100 });
+      const res = await api.events.list({ 
+        limit: 100,
+        status: isAdmin ? 'all' : undefined,
+        userId: currentUser?.id 
+      });
       if (res.data) {
         dbStore.setEvents(res.data);
-        const currentEvents = dbStore.getEvents();
+        const currentEvents = dbStore.getEvents(isAdmin, currentUser?.id);
         setEvents(currentEvents);
       }
     } catch (_) {}
@@ -181,10 +186,19 @@ function EventsContent() {
     } else {
       setRegisteredIds(prev => prev.filter(id => id !== eventId));
     }
-    setEvents([...dbStore.getEvents()]);
+    setEvents([...dbStore.getEvents(isAdmin, currentUser?.id)]);
   };
 
+  const pendingCount = events.filter(e => e.status === 'pending' || e.status === 'changes_requested').length;
+  const approvedCount = events.filter(e => e.status === 'approved' || e.status === 'published').length;
+
   const filtered = events.filter(evt => {
+    if (statusFilter === 'pending') {
+      if (evt.status !== 'pending' && evt.status !== 'changes_requested') return false;
+    } else if (statusFilter === 'approved') {
+      if (evt.status !== 'approved' && evt.status !== 'published') return false;
+    }
+
     if (selectedCategory !== 'All') {
       const sel = selectedCategory.toLowerCase().trim();
       const cat = (evt.category || '').toLowerCase().trim();
@@ -225,7 +239,7 @@ function EventsContent() {
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '36px',
+          marginBottom: '28px',
           gap: '16px',
         }}
       >
@@ -250,6 +264,100 @@ function EventsContent() {
           <PlusCircle size={18} /> Host / Submit Event
         </a>
       </div>
+
+      {/* Pending Submissions Alert & Filter Toolbar */}
+      {pendingCount > 0 && (
+        <div
+          className="glass-card glow-border"
+          style={{
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⏳</span>
+            <div>
+              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {isAdmin
+                  ? `${pendingCount} Event${pendingCount > 1 ? 's' : ''} Awaiting Admin Approval`
+                  : `You have ${pendingCount} event submission${pendingCount > 1 ? 's' : ''} under review`}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                {isAdmin
+                  ? 'Review, approve, or request changes on pending submissions directly below or in the moderation hub.'
+                  : 'Submitted events are reviewed by platform admins before becoming publicly visible. Your submissions are visible to you below.'}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 'var(--radius-sm)', padding: '2px' }}>
+              <button
+                onClick={() => setStatusFilter('all')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: statusFilter === 'all' ? 'rgba(255,255,255,0.15)' : 'transparent',
+                  color: statusFilter === 'all' ? '#fff' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                All ({events.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('pending')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  background: statusFilter === 'pending' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
+                  color: statusFilter === 'pending' ? '#f59e0b' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ⏳ Pending ({pendingCount})
+              </button>
+              <button
+                onClick={() => setStatusFilter('approved')}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  background: statusFilter === 'approved' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                  color: statusFilter === 'approved' ? '#10b981' : 'var(--text-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Approved ({approvedCount})
+              </button>
+            </div>
+
+            {isAdmin && (
+              <a
+                href="/admin/moderation"
+                className="btn btn-secondary text-xs"
+                style={{ padding: '6px 12px', fontSize: '0.78rem', textDecoration: 'none' }}
+              >
+                Moderation Hub ➔
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Category Pills & Search */}
       <div

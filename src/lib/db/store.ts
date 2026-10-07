@@ -777,9 +777,16 @@ class DataStore {
   public setEvents(serverEvents: CommunityEvent[]): void {
     if (!Array.isArray(serverEvents)) return;
 
-    // The server is the single source of truth for active community events.
-    // When an event is removed or rejected by an admin, it must NOT be revived from local storage.
-    this.events = [...serverEvents].sort((a, b) => {
+    // Merge server events while preserving local pending submissions
+    const eventMap = new Map<string, CommunityEvent>();
+    this.events.forEach(e => {
+      if (e.status === 'pending' || (e as any).status === 'draft' || e.status === 'changes_requested') {
+        eventMap.set(e.id, e);
+      }
+    });
+    serverEvents.forEach(e => eventMap.set(e.id, e));
+
+    this.events = Array.from(eventMap.values()).sort((a, b) => {
       const dateA = new Date(a.createdAt || a.date || 0).getTime();
       const dateB = new Date(b.createdAt || b.date || 0).getTime();
       return dateB - dateA;

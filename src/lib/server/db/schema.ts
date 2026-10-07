@@ -152,8 +152,14 @@ CREATE TABLE IF NOT EXISTS community_events (
   poster_url TEXT,
   max_participants INTEGER,
   banner_image TEXT,
+  rules TEXT,
+  schedule TEXT,
+  prizes TEXT,
+  team_size TEXT,
+  fees TEXT,
+  contact_email TEXT,
   posted_by_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('draft', 'pending', 'approved', 'rejected', 'expired')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('draft', 'pending', 'changes_requested', 'approved', 'published', 'rejected', 'cancelled', 'archived', 'expired')),
   rejection_reason TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
@@ -168,6 +174,9 @@ CREATE INDEX IF NOT EXISTS idx_events_date ON community_events(date);
 CREATE TABLE IF NOT EXISTS event_registrations (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   event_id TEXT NOT NULL REFERENCES community_events(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'REGISTERED',
+  team_name TEXT,
+  attended_at TEXT,
   created_at TEXT NOT NULL,
   PRIMARY KEY (user_id, event_id)
 );

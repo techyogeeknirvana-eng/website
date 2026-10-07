@@ -75,14 +75,12 @@ export default function ModerationQueuePage() {
       dbStore.setOpportunities(allOpps);
 
       const eventMap = new Map<string, CommunityEvent>();
+      dbStore.getEvents(true).forEach(e => eventMap.set(e.id, e));
       if (eventsApproved.status === 'fulfilled' && eventsApproved.value?.data) {
         eventsApproved.value.data.forEach(e => eventMap.set(e.id, e));
       }
       if (eventsPending.status === 'fulfilled' && eventsPending.value?.data) {
         eventsPending.value.data.forEach(e => eventMap.set(e.id, e));
-      }
-      if (eventsApproved.status !== 'fulfilled' && eventsPending.status !== 'fulfilled') {
-        dbStore.getEvents(true).forEach(e => eventMap.set(e.id, e));
       }
       const allEvents = Array.from(eventMap.values());
       setEvents(allEvents);
@@ -123,7 +121,7 @@ export default function ModerationQueuePage() {
   }, [currentUser]);
 
   const pendingOpps = opportunities.filter(o => o.status === 'pending');
-  const pendingEvents = events.filter(e => e.status === 'pending');
+  const pendingEvents = events.filter(e => e.status === 'pending' || e.status === 'changes_requested');
   const pendingMoments = moments.filter(m => m.status === 'pending');
   const pendingProjects = projects.filter(p => p.approvalStatus === 'pending');
   const pendingReports = reports.filter(r => r.status === 'pending');

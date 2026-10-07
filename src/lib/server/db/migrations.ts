@@ -228,7 +228,7 @@ export async function runMigrations(): Promise<void> {
       await db.execute('ALTER TABLE community_events ADD COLUMN contact_email TEXT');
     } catch (_) {}
     try {
-      await db.execute('ALTER TABLE event_registrations ADD COLUMN status TEXT DEFAULT "REGISTERED"');
+      await db.execute("ALTER TABLE event_registrations ADD COLUMN status TEXT DEFAULT 'REGISTERED'");
     } catch (_) {}
     try {
       await db.execute('ALTER TABLE event_registrations ADD COLUMN team_name TEXT');
@@ -242,6 +242,51 @@ export async function runMigrations(): Promise<void> {
     try {
       await db.execute("UPDATE users SET role = 'ADMIN' WHERE LOWER(email) = 'techyogeeknirvana@gmail.com' OR id = 'user_lead_admin'");
     } catch (_) {}
+
+    // Seed Community Events if table is empty
+    const eventCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM community_events');
+    if (!eventCount || Number(eventCount.count) === 0) {
+      const { SEED_EVENTS } = await import('@/lib/db/seedData');
+      for (const evt of SEED_EVENTS) {
+        await db.execute(`
+          INSERT INTO community_events (
+            id, title, category, organizer, date, time, location,
+            is_online, registration_deadline, description, eligibility, skills,
+            registration_url, event_website_url, poster_url, max_participants, banner_image,
+            rules, schedule, prizes, team_size, fees, contact_email,
+            posted_by_user_id, status, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          evt.id,
+          evt.title,
+          evt.category,
+          evt.organizer,
+          evt.date,
+          evt.time,
+          evt.location,
+          evt.isOnline ? 1 : 0,
+          evt.registrationDeadline,
+          evt.description,
+          evt.eligibility,
+          JSON.stringify(evt.skills || []),
+          evt.registrationUrl,
+          evt.eventWebsiteUrl || evt.registrationUrl,
+          evt.posterUrl || evt.bannerImage,
+          evt.maxParticipants || null,
+          evt.bannerImage,
+          evt.rules || null,
+          evt.schedule || null,
+          evt.prizes || null,
+          evt.teamSize || null,
+          evt.fees || null,
+          evt.contactEmail || null,
+          evt.postedBy?.id || 'user_lead_admin',
+          evt.status || 'approved',
+          evt.createdAt || now,
+          evt.createdAt || now,
+        ]);
+      }
+    }
 
     // Seed Collab Requests if table is empty
     const collabCount = await db.queryOne<{ count: number }>('SELECT COUNT(*) as count FROM collab_requests');

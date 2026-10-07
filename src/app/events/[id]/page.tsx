@@ -57,7 +57,12 @@ export default function EventDetailPage() {
     }
 
     // 2. Fetch fresh data from backend REST API
-    api.events.list({ search: eventId, limit: 100 })
+    api.events.list({ 
+      search: eventId, 
+      status: isAdmin ? 'all' : undefined,
+      userId: currentUser?.id,
+      limit: 100 
+    })
       .then(res => {
         if (res.data) {
           const match = res.data.find(e => e.id === eventId);

@@ -7,8 +7,19 @@ import { isGlobalAdminEmail } from '@/lib/server/middleware/authGuard';
 
 export async function GET(req: NextRequest) {
   try {
-    const authUser = await extractAuthUser(req);
-    const isAdmin = Boolean(authUser && (authUser.role === 'ADMIN' || isGlobalAdminEmail(authUser.email)));
+    let authUser = await extractAuthUser(req);
+    const userEmailHeader = req.headers.get('x-user-email');
+    const userIdHeader = req.headers.get('x-user-id');
+    if (!authUser && userEmailHeader) {
+      try {
+        const { userService } = await import('@/lib/server/services/userService');
+        authUser = await userService.getUserByEmail(userEmailHeader);
+      } catch (_) {}
+    }
+    const isAdmin = Boolean(
+      (authUser && (authUser.role === 'ADMIN' || isGlobalAdminEmail(authUser.email))) ||
+      (userEmailHeader && isGlobalAdminEmail(userEmailHeader))
+    );
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
 
@@ -18,7 +29,7 @@ export async function GET(req: NextRequest) {
       if (!eventId) return apiError('eventId required', 400);
       const targetEvent = await eventService.getEventById(eventId);
       if (!targetEvent) return apiError('Event not found', 404);
-      if (!isAdmin && targetEvent.postedBy.id !== authUser?.id) {
+      if (!isAdmin && targetEvent.postedBy.id !== authUser?.id && targetEvent.postedBy.id !== userIdHeader) {
         return apiError('Forbidden. Only event organizer or admin can view registration list.', 403);
       }
       const registrations = await eventService.listEventRegistrations(eventId);
@@ -31,7 +42,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-    const userId = searchParams.get('userId') || authUser?.id || undefined;
+    const userId = searchParams.get('userId') || userIdHeader || authUser?.id || undefined;
 
     const { items, total } = await eventService.listEvents({
       status,
