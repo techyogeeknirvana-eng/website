@@ -137,6 +137,16 @@ export function Footer() {
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.86rem' }}>
               <li>
+                <a href="/growth" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', color: '#10b981', fontWeight: 600 }}>
+                  Growth Hub (Verbal Manners & Etiquette)
+                </a>
+              </li>
+              <li>
+                <a href="/games" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none', color: 'var(--accent-purple)', fontWeight: 600 }}>
+                  Games Arena (Say It Better)
+                </a>
+              </li>
+              <li>
                 <a href="/community" className="btn-ghost" style={{ justifyContent: 'flex-start', padding: 0, textDecoration: 'none' }}>
                   Discord-style Community
                 </a>

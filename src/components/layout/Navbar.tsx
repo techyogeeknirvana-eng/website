@@ -24,8 +24,12 @@ import {
   ExternalLink,
   LogOut,
   Sliders,
-  MessageSquare
+  MessageSquare,
+  Palette,
+  Gamepad2,
+  Award
 } from 'lucide-react';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { SoundToggle } from '@/components/common/SoundToggle';
 import { GoogleIcon } from '@/components/auth/GoogleAuthModal';
@@ -35,6 +39,7 @@ import { CreditChip } from '@/components/credits/CreditChip';
 export function Navbar() {
   const pathname = usePathname();
   const { currentUser, isAuthenticated, isAdmin, isGoogleLoggedIn, openGoogleModal, openGoogleChooser, signInWithGoogle, logout } = useAuth();
+  const { setIsCustomizerOpen } = useThemeCustomizer();
   const [allFunctionsOpen, setAllFunctionsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -60,6 +65,16 @@ export function Navbar() {
   };
 
   const featureDirectory = [
+    {
+      category: 'Growth Hub & Etiquette Arena',
+      color: '#10b981',
+      items: [
+        { label: 'Growth Hub & Manners Coach', desc: 'Communication coaching, etiquette diagnostic & adaptive practice', href: '/growth', icon: <Sparkles size={16} />, badge: 'Flagship' },
+        { label: 'TYGN Games Arena', desc: 'Tone challenges, Say It Better, etiquette dilemmas & vocab precision', href: '/games', icon: <Gamepad2 size={16} />, badge: 'Play & Learn' },
+        { label: '10-Q Etiquette Diagnostic', desc: 'Official 10-question evaluation with personalized weakness insights', href: '/growth#quiz', icon: <CheckCircle2 size={16} />, badge: '10 Questions' },
+        { label: 'Daily Growth Challenge', desc: 'Complete daily communication micro-challenges & maintain streak', href: '/growth#daily', icon: <Award size={16} />, badge: '+50 XP' },
+      ]
+    },
     {
       category: 'Community & Connections',
       color: '#06b6d4',
@@ -187,6 +202,58 @@ export function Navbar() {
           </a>
         </div>
 
+        {/* Quick Nav Links for Growth & Games */}
+        <nav
+          className="hide-on-tablet"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginLeft: '6px',
+          }}
+        >
+          <a
+            href="/growth"
+            onClick={() => soundEffects.playClick()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              color: pathname === '/growth' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+              background: pathname === '/growth' ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Sparkles size={14} style={{ color: 'var(--accent-purple)' }} />
+            <span>Growth Hub</span>
+          </a>
+          <a
+            href="/games"
+            onClick={() => soundEffects.playClick()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              color: pathname === '/games' ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+              background: pathname === '/games' ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Gamepad2 size={14} style={{ color: '#10b981' }} />
+            <span>Games</span>
+          </a>
+        </nav>
+
         {/* Center: Enhanced Formatted Search Bar */}
         <div
           onClick={handleOpenSearch}
@@ -238,8 +305,34 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Right Controls: Sound, Google Auth, and THREE LINES (All Features Menu) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Right Controls: Sound, Google Auth, Customize and THREE LINES */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Experience Customizer Trigger */}
+          <button
+            onClick={() => {
+              soundEffects.playClick();
+              setIsCustomizerOpen(true);
+            }}
+            title="Customize Theme, Fonts & Visuals"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              borderRadius: 'var(--radius-full)',
+              border: '1px solid var(--border-glow)',
+              background: 'rgba(99, 102, 241, 0.1)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Palette size={14} style={{ color: 'var(--accent-cyan)' }} />
+            <span className="hide-on-mobile">Customize</span>
+          </button>
+
           {/* Sound Synthesizer */}
           <SoundToggle />
 
@@ -737,6 +830,11 @@ export function Navbar() {
       )}
 
       <style jsx>{`
+        @media (max-width: 1024px) {
+          .hide-on-tablet {
+            display: none !important;
+          }
+        }
         @media (max-width: 768px) {
           .navbar-search-bar {
             display: none !important;

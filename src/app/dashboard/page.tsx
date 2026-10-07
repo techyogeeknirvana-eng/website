@@ -28,6 +28,9 @@ import { Opportunity, CommunityEvent, Quiz } from '@/types';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { ReferralModal } from '@/components/referral/ReferralModal';
+import { SkillRadar } from '@/components/growth/SkillRadar';
+import { growthProgressStore } from '@/lib/growth/progressStore';
+import { Gamepad2 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { currentUser, refreshUserData } = useAuth();
@@ -36,11 +39,13 @@ export default function DashboardPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [growthProgress, setGrowthProgress] = useState(growthProgressStore.getProgress());
 
   useEffect(() => {
     setOpportunities(dbStore.getOpportunities().slice(0, 3));
     setEvents(dbStore.getEvents().slice(0, 2));
     setQuizzes(dbStore.getQuizzes().slice(0, 2));
+    setGrowthProgress(growthProgressStore.getProgress());
   }, []);
 
   const getTimeGreeting = () => {
@@ -198,6 +203,22 @@ export default function DashboardPage() {
             <FileText size={16} style={{ color: 'var(--accent-violet)' }} /> Check Resume
           </a>
           <a
+            href="/growth"
+            onClick={() => soundEffects.playClick()}
+            className="btn btn-secondary"
+            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
+          >
+            <Sparkles size={16} style={{ color: 'var(--accent-purple)' }} /> Growth Hub
+          </a>
+          <a
+            href="/games"
+            onClick={() => soundEffects.playClick()}
+            className="btn btn-secondary"
+            style={{ padding: '14px', borderRadius: 'var(--radius-md)', textDecoration: 'none' }}
+          >
+            <Gamepad2 size={16} style={{ color: '#10b981' }} /> Games Arena
+          </a>
+          <a
             href="/opportunities/submit"
             onClick={() => soundEffects.playClick()}
             className="btn btn-primary"
@@ -205,6 +226,154 @@ export default function DashboardPage() {
           >
             <PlusCircle size={16} /> Post Opportunity
           </a>
+        </div>
+      </div>
+
+      {/* Personal Growth & Skill Radar Showcase */}
+      <div
+        className="glass-card glow-border"
+        style={{
+          marginBottom: '40px',
+          padding: '32px',
+          borderRadius: '24px',
+          background: 'linear-gradient(135deg, rgba(16, 24, 40, 0.95) 0%, rgba(13, 31, 36, 0.95) 100%)',
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45), 0 0 30px rgba(16, 185, 129, 0.1)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span className="badge badge-emerald" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
+                ADAPTIVE GROWTH PLATFORM
+              </span>
+              <span className="badge badge-amber" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
+                <Flame size={12} /> {growthProgress.currentStreak} DAY STREAK
+              </span>
+              <span className="badge badge-indigo" style={{ fontSize: '0.72rem', padding: '3px 10px' }}>
+                LEVEL {growthProgress.levelNumber}: {growthProgress.levelName.toUpperCase()}
+              </span>
+            </div>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+              Verbal Manners, Etiquette &amp; Executive Presence Radar
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginTop: '4px', maxWidth: '640px' }}>
+              Your communication intelligence profile is updated in real-time as you complete diagnostic quizzes, daily challenges, and interactive game scenarios.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <a
+              href="/growth#quiz"
+              onClick={() => soundEffects.playClick()}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.84rem', padding: '8px 16px', textDecoration: 'none' }}
+            >
+              Take 10-Q Diagnostic
+            </a>
+            <a
+              href="/growth"
+              onClick={() => soundEffects.playClick()}
+              className="btn btn-primary"
+              style={{ fontSize: '0.84rem', padding: '8px 16px', textDecoration: 'none' }}
+            >
+              Open Full Growth Hub
+            </a>
+          </div>
+        </div>
+
+        {/* Radar & Metrics Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '28px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <SkillRadar />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div
+              style={{
+                padding: '16px 20px',
+                borderRadius: '16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>GROWTH XP PROGRESSION</span>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>{growthProgress.xp} XP</span>
+              </div>
+              <div style={{ width: '100%', height: '8px', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${Math.min(100, (growthProgress.xp % 500) / 5)}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #10b981, #06b6d4)',
+                    borderRadius: '999px',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div
+                style={{
+                  padding: '14px',
+                  borderRadius: '14px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-subtle)',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>DIAGNOSTICS TAKEN</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+                  {growthProgress.totalQuizSessions}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: '14px',
+                  borderRadius: '14px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-subtle)',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>QUESTIONS SOLVED</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '2px' }}>
+                  {growthProgress.totalQuestionsAnswered}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '16px',
+                background: 'rgba(16, 185, 129, 0.06)',
+                border: '1px solid rgba(16, 185, 129, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
+                  Play &ldquo;Say It Better&rdquo; Arena
+                </div>
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Refine crude campus phrases into polished executive statements
+                </div>
+              </div>
+              <a
+                href="/games"
+                onClick={() => soundEffects.playClick()}
+                className="btn btn-primary"
+                style={{ fontSize: '0.78rem', padding: '6px 14px', textDecoration: 'none', flexShrink: 0 }}
+              >
+                Play Now
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 

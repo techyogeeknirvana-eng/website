@@ -15,11 +15,15 @@ import {
   Layers, 
   X,
   ArrowRight,
-  Shield
+  Shield,
+  Palette,
+  Gamepad2,
+  CheckCircle2
 } from 'lucide-react';
 import { dbStore } from '@/lib/db/store';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useThemeCustomizer } from '@/contexts/ThemeCustomizerContext';
 
 interface SearchItem {
   id: string;
@@ -37,6 +41,7 @@ export function CommandPalette() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const { isAdmin } = useAuth();
+  const { setIsCustomizerOpen } = useThemeCustomizer();
 
   // Listen for Cmd+K or Ctrl+K
   useEffect(() => {
@@ -68,10 +73,16 @@ export function CommandPalette() {
   const roadmaps = dbStore.getLearningPaths();
 
   const baseItems: SearchItem[] = [
+    { id: 'act_growth', title: 'Launch Growth Hub & Verbal Manners Coach', category: 'Personal Growth', type: 'action', url: '/growth', icon: <Sparkles size={16} style={{ color: '#10b981' }} /> },
+    { id: 'act_quiz_diagnostic', title: 'Take 10-Q Verbal Manners Diagnostic', category: 'Personal Growth', type: 'action', url: '/growth#quiz', icon: <CheckCircle2 size={16} style={{ color: '#06b6d4' }} /> },
+    { id: 'act_game_say_better', title: 'Play "Say It Better" Communication Game', category: 'Games Arena', type: 'action', url: '/games', icon: <Gamepad2 size={16} style={{ color: '#ec4899' }} /> },
+    { id: 'act_customize', title: 'Customize Experience (10 Themes, Fonts, Sliders)', category: 'Quick Action', type: 'action', url: '#customize', icon: <Palette size={16} style={{ color: '#8b5cf6' }} /> },
     { id: 'act_ai', title: 'Ask Nirvana AI Assistant', category: 'Quick Action', type: 'action', url: '#ai-chat', icon: <Sparkles size={16} style={{ color: 'var(--accent-indigo)' }} /> },
     { id: 'act_resume', title: 'Analyze Resume in AI Resume Lab', category: 'Quick Action', type: 'action', url: '/resume-lab', icon: <FileText size={16} style={{ color: 'var(--accent-cyan)' }} /> },
     { id: 'act_quiz_create', title: 'Create Live Quiz / Presentation', category: 'Quick Action', type: 'action', url: '/live/create', icon: <Radio size={16} style={{ color: 'var(--accent-amber)' }} /> },
     { id: 'act_collab', title: 'Find Hackathon Teammates (Collab Finder)', category: 'Quick Action', type: 'action', url: '/collab-finder', icon: <Users size={16} style={{ color: 'var(--accent-emerald)' }} /> },
+    { id: 'nav_growth', title: 'Growth Hub: Manners, Etiquette & Simulator', category: 'Navigation', type: 'navigation', url: '/growth', icon: <Sparkles size={16} style={{ color: '#10b981' }} /> },
+    { id: 'nav_games', title: 'Games Arena: Say It Better & Dilemmas', category: 'Navigation', type: 'navigation', url: '/games', icon: <Gamepad2 size={16} style={{ color: '#ec4899' }} /> },
     { id: 'nav_community', title: 'Community Discord-style Channels', category: 'Navigation', type: 'navigation', url: '/community', icon: <Users size={16} /> },
     { id: 'nav_opps', title: 'Browse Jobs & Internships Marketplace', category: 'Navigation', type: 'navigation', url: '/opportunities', icon: <Briefcase size={16} /> },
     { id: 'nav_events', title: 'Upcoming Events & Hackathons', category: 'Navigation', type: 'navigation', url: '/events', icon: <Calendar size={16} /> },
@@ -133,6 +144,8 @@ export function CommandPalette() {
     setIsOpen(false);
     if (item.url === '#ai-chat') {
       window.dispatchEvent(new CustomEvent('toggle-nirvana-ai'));
+    } else if (item.url === '#customize') {
+      setIsCustomizerOpen(true);
     } else {
       router.push(item.url);
     }

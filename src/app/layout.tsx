@@ -10,6 +10,9 @@ import { LeftSideThemeToggle } from '@/components/common/LeftSideThemeToggle';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { BroadcastModal } from '@/components/announcements/BroadcastModal';
 
+import { ThemeCustomizerProvider } from '@/contexts/ThemeCustomizerContext';
+import { ThemeCustomizerModal } from '@/components/theme/ThemeCustomizerModal';
+
 export const metadata: Metadata = {
   title: 'Techyogeek Nirvana — Where Tech Minds Connect, Create & Grow',
   description: 'An AI-powered technology community platform combining Discord-style discussions, Unstop-style opportunities, Mentimeter-style live presentations, career tools, and developer networking.',
@@ -48,19 +51,22 @@ export default function RootLayout({
     <html lang="en" data-theme="light">
       <body className="bg-cyber-grid">
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
-        <AuthProvider>
-          <RouteGuard>
-            <Navbar />
-            <main style={{ minHeight: 'calc(100vh - 68px)' }}>
-              {children}
-            </main>
-            <Footer />
-            <LeftSideThemeToggle />
-            <NirvanaAIChatbot />
-            <CommandPalette />
-            <BroadcastModal />
-          </RouteGuard>
-        </AuthProvider>
+        <ThemeCustomizerProvider>
+          <AuthProvider>
+            <RouteGuard>
+              <Navbar />
+              <main style={{ minHeight: 'calc(100vh - 68px)' }}>
+                {children}
+              </main>
+              <Footer />
+              <LeftSideThemeToggle />
+              <NirvanaAIChatbot />
+              <CommandPalette />
+              <BroadcastModal />
+              <ThemeCustomizerModal />
+            </RouteGuard>
+          </AuthProvider>
+        </ThemeCustomizerProvider>
       </body>
     </html>
   );

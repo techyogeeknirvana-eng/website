@@ -67,6 +67,32 @@ class SoundSynthesizer {
     }
   }
 
+  public playHover() {
+    if (!this.soundEnabled) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(550, ctx.currentTime + 0.03);
+
+      gain.gain.setValueAtTime(0.03, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.03);
+    } catch {
+      // AudioContext policy suppression fallback
+    }
+  }
+
   public playError() {
     if (!this.soundEnabled) return;
     const ctx = this.getContext();
