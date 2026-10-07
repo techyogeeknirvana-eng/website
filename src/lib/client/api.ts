@@ -174,16 +174,17 @@ export const api = {
 
   // Community Events
   events: {
-    list: (params?: { status?: string; category?: string; search?: string; page?: number; limit?: number }) => {
+    list: (params?: { status?: string; category?: string; search?: string; page?: number; limit?: number; userId?: string }) => {
       const q = new URLSearchParams();
       if (params?.status) q.set('status', params.status);
       if (params?.category) q.set('category', params.category);
       if (params?.search) q.set('search', params.search);
       if (params?.page) q.set('page', String(params.page));
       if (params?.limit) q.set('limit', String(params.limit));
+      if (params?.userId) q.set('userId', params.userId);
       return request<CommunityEvent[]>(`/api/events?${q.toString()}`);
     },
-    create: (data: Partial<CommunityEvent>) =>
+    create: (data: Partial<CommunityEvent> & { postedByUserId?: string; userEmail?: string; userName?: string }) =>
       request<CommunityEvent>('/api/events', {
         method: 'POST',
         body: JSON.stringify(data),

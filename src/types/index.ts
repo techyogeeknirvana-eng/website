@@ -94,6 +94,7 @@ export interface CommunityEvent {
     avatar: string;
     role: UserRole;
   };
+  postedByUserId?: string;
   status: SubmissionStatus;
   rejectionReason?: string;
   createdAt: string;

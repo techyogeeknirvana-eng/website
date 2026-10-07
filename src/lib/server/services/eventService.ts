@@ -160,9 +160,13 @@ export const eventService = {
 
   async getEventById(id: string): Promise<CommunityEvent | null> {
     const row = await db.queryOne(`
-      SELECT e.*, u.id as poster_id, u.name as poster_name, u.avatar as poster_avatar, u.role as poster_role
+      SELECT e.*, 
+        COALESCE(u.id, e.posted_by_user_id) as poster_id, 
+        COALESCE(u.name, 'Community Member') as poster_name, 
+        COALESCE(u.avatar, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80') as poster_avatar, 
+        COALESCE(u.role, 'USER') as poster_role
       FROM community_events e
-      JOIN users u ON e.posted_by_user_id = u.id
+      LEFT JOIN users u ON e.posted_by_user_id = u.id
       WHERE e.id = ? AND e.deleted_at IS NULL
     `, [id]);
 

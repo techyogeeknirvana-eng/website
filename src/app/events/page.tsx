@@ -33,7 +33,7 @@ export default function EventsPage() {
   const [editingEvent, setEditingEvent] = useState<CommunityEvent | null>(null);
 
   const loadData = async () => {
-    const evts = dbStore.getEvents(isAdmin);
+    const evts = dbStore.getEvents(isAdmin, currentUser?.id);
     setEvents(evts);
 
     if (currentUser) {
@@ -42,13 +42,11 @@ export default function EventsPage() {
     }
 
     try {
-      const res = await api.events.list({ limit: 100 });
+      const res = await api.events.list({ limit: 100, userId: currentUser?.id });
       if (res.data) {
         dbStore.setEvents(res.data);
-        const filtered = isAdmin 
-          ? res.data 
-          : res.data.filter(e => e.status === 'approved' || e.postedBy?.id === currentUser?.id);
-        setEvents(filtered);
+        const currentEvents = dbStore.getEvents(isAdmin, currentUser?.id);
+        setEvents(currentEvents);
       }
     } catch (_) {}
   };
@@ -122,7 +120,7 @@ export default function EventsPage() {
     } else {
       setRegisteredIds(prev => prev.filter(id => id !== eventId));
     }
-    setEvents([...dbStore.getEvents()]);
+    setEvents([...dbStore.getEvents(isAdmin, currentUser?.id)]);
   };
 
   const filtered = events.filter(evt => {

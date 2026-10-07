@@ -13,13 +13,15 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
+    const userId = searchParams.get('userId') || authUser?.id || undefined;
+
     const { items, total } = await eventService.listEvents({
       status,
       category,
       search,
       page,
       limit,
-      userId: authUser?.id,
+      userId,
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -41,12 +43,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     let authUser = await extractAuthUser(req);
     if (!authUser) {
-      const uid = body.postedByUserId || body.userId || body.authorId;
+      const uid = body.postedByUserId || body.userId || body.authorId || body.postedBy?.id;
       if (uid) {
         const { userService } = await import('@/lib/server/services/userService');
-        const email = body.userEmail || `${uid}@tygn.dev`;
-        const name = body.organizer || body.userName || 'Community Member';
-        await userService.ensureUserInDb({ id: uid, email, name, role: 'USER' });
+        const email = body.userEmail || body.postedBy?.email || `${uid}@tygn.dev`;
+        const name = body.organizer || body.userName || body.postedBy?.name || 'Community Member';
+        const role = body.postedBy?.role === 'ADMIN' ? 'ADMIN' : 'USER';
+        await userService.ensureUserInDb({ id: uid, email, name, role });
         authUser = await userService.getUserById(uid);
       }
     }

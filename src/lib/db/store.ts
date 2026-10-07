@@ -306,7 +306,7 @@ class DataStore {
       ] = await Promise.allSettled([
         fetch('/api/opportunities?limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
         fetch('/api/opportunities?status=pending&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
-        fetch('/api/events?limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
+        fetch(`/api/events?limit=100${activeUserId ? `&userId=${encodeURIComponent(activeUserId)}` : ''}`, { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
         fetch('/api/events?status=pending&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
         fetch('/api/announcements', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
         fetch('/api/moments?includePending=true&limit=100', { headers, credentials: 'include' }).then(r => r.ok ? r.json() : null),
@@ -750,17 +750,45 @@ class DataStore {
   }
 
   // --- Events ---
-  public getEvents(includePending: boolean = false): CommunityEvent[] {
+  public getEvents(includePending: boolean = false, currentUserId?: string): CommunityEvent[] {
     if (includePending) return [...this.events];
-    return this.events.filter(e => e.status === 'approved');
+    return this.events.filter(e => 
+      e.status === 'approved' || 
+      (Boolean(currentUserId) && (e.postedBy?.id === currentUserId || (e as any).postedByUserId === currentUserId))
+    );
   }
 
   public getEvent(id: string): CommunityEvent | undefined {
     return this.events.find(e => e.id === id);
   }
 
-  public setEvents(events: CommunityEvent[]): void {
-    this.events = events;
+  public setEvents(serverEvents: CommunityEvent[]): void {
+    if (!Array.isArray(serverEvents)) return;
+
+    // Use a map to preserve local pending events and merge server events
+    const eventMap = new Map<string, CommunityEvent>();
+
+    // 1. First add current local events so pending submissions are not wiped out
+    for (const evt of this.events) {
+      if (evt && evt.id) {
+        eventMap.set(evt.id, evt);
+      }
+    }
+
+    // 2. Overwrite / merge with incoming server events
+    for (const sEvt of serverEvents) {
+      if (sEvt && sEvt.id) {
+        eventMap.set(sEvt.id, sEvt);
+      }
+    }
+
+    // 3. Keep ordered: newest first
+    this.events = Array.from(eventMap.values()).sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.date || 0).getTime();
+      const dateB = new Date(b.createdAt || b.date || 0).getTime();
+      return dateB - dateA;
+    });
+
     this.save(STORAGE_KEYS.EVENTS, this.events);
   }
 

@@ -60,6 +60,7 @@ export default function SubmitEventPage() {
   
   // UI States
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [posterError, setPosterError] = useState('');
 
   // Validate URL syntax
@@ -176,7 +177,7 @@ export default function SubmitEventPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       alert('Please log in or select a profile first.');
@@ -197,9 +198,10 @@ export default function SubmitEventPage() {
       return;
     }
 
+    setIsSubmitting(true);
     const skills = skillsInput.split(',').map(s => s.trim()).filter(Boolean);
 
-    dbStore.addEvent(
+    const addedEvent = dbStore.addEvent(
       {
         title: title.trim(),
         category,
@@ -219,6 +221,25 @@ export default function SubmitEventPage() {
       },
       currentUser
     );
+
+    try {
+      await api.events.create({
+        ...addedEvent,
+        postedByUserId: currentUser.id,
+        userEmail: currentUser.email,
+        userName: currentUser.name,
+        postedBy: {
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar,
+          role: currentUser.role,
+        },
+      });
+    } catch (err) {
+      console.warn('Backend event creation warning:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
 
     soundEffects.playSuccess();
     setSubmittedSuccess(true);
@@ -742,10 +763,19 @@ export default function SubmitEventPage() {
               <div style={{ marginTop: '12px' }}>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn btn-primary"
-                  style={{ width: '100%', padding: '14px', fontSize: '1rem', borderRadius: 'var(--radius-md)', fontWeight: 700 }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '14px', 
+                    fontSize: '1rem', 
+                    borderRadius: 'var(--radius-md)', 
+                    fontWeight: 700,
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  Submit Event for Admin Approval
+                  {isSubmitting ? 'Submitting Event...' : 'Submit Event for Admin Approval'}
                 </button>
               </div>
             </form>
