@@ -1,4 +1,4 @@
-export type UserRole = 'USER' | 'ADMIN';
+export type UserRole = 'GUEST' | 'MEMBER' | 'USER' | 'ORGANIZER' | 'MODERATOR' | 'ADMIN';
 
 export interface User {
   id: string;
@@ -29,7 +29,16 @@ export interface User {
   referralCount?: number;
 }
 
-export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired';
+export type SubmissionStatus = 
+  | 'draft' 
+  | 'pending' 
+  | 'changes_requested' 
+  | 'approved' 
+  | 'published' 
+  | 'rejected' 
+  | 'cancelled' 
+  | 'archived' 
+  | 'expired';
 
 export interface Opportunity {
   id: string;
@@ -53,6 +62,7 @@ export interface Opportunity {
   };
   status: SubmissionStatus;
   rejectionReason?: string;
+  isVerified?: boolean;
   createdAt: string;
   savedBy?: string[];
 }
@@ -88,6 +98,12 @@ export interface CommunityEvent {
   participantsCount: number;
   maxParticipants?: number;
   bannerImage: string;
+  rules?: string;
+  schedule?: string;
+  prizes?: string;
+  teamSize?: string;
+  fees?: string;
+  contactEmail?: string;
   postedBy: {
     id: string;
     name: string;
@@ -101,6 +117,28 @@ export interface CommunityEvent {
   registeredUsers?: string[];
 }
 
+export type RegistrationStatus = 
+  | 'REGISTERED' 
+  | 'WAITLISTED' 
+  | 'CANCELLED' 
+  | 'ATTENDED' 
+  | 'NO_SHOW' 
+  | 'DISQUALIFIED';
+
+export interface EventRegistration {
+  id?: string;
+  userId: string;
+  eventId: string;
+  userName: string;
+  userEmail: string;
+  userAvatar?: string;
+  status: RegistrationStatus;
+  teamName?: string;
+  answers?: Record<string, string>;
+  createdAt: string;
+  attendedAt?: string;
+}
+
 export interface CommunityChannel {
   id: string;
   slug: string;
@@ -110,6 +148,14 @@ export interface CommunityChannel {
   iconName: string;
   isLocked?: boolean;
   isAnnouncement?: boolean;
+}
+
+export interface MessageAttachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
 }
 
 export interface CommunityMessage {
@@ -124,6 +170,7 @@ export interface CommunityMessage {
     language: string;
     code: string;
   };
+  attachments?: MessageAttachment[];
   timestamp: string;
   reactions: Record<string, string[]>; // emoji -> array of userIds
   replyToId?: string;
@@ -234,8 +281,23 @@ export interface LiveSession {
   currentSlideIndex: number;
   participants: LiveParticipant[];
   responses: LiveResponse[];
+  qaQuestions?: LiveQAQuestion[];
+  isPaused?: boolean;
   startedAt?: string;
   endedAt?: string;
+  createdAt: string;
+}
+
+export interface LiveQAQuestion {
+  id: string;
+  participantId: string;
+  participantName: string;
+  authorName?: string;
+  authorAvatar?: string;
+  question: string;
+  upvotes: number;
+  upvotedBy: string[];
+  isAnswered: boolean;
   createdAt: string;
 }
 

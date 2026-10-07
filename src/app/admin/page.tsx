@@ -65,8 +65,8 @@ export default function AdminOverviewPage() {
   const auditLogs = dbStore.getAuditLogs();
   const reports = dbStore.getReports();
 
-  const pendingOpps = opportunities.filter(o => o.status === 'pending');
-  const pendingEvents = events.filter(e => e.status === 'pending');
+  const pendingOpps = opportunities.filter(o => o.status === 'pending' || (o as any).status === 'changes_requested');
+  const pendingEvents = events.filter(e => e.status === 'pending' || e.status === 'changes_requested');
   const pendingMoments = moments.filter(m => m.status === 'pending');
   const pendingProjects = projects.filter(p => p.approvalStatus === 'pending');
   const pendingReports = reports.filter(r => r.status === 'pending');
@@ -74,8 +74,8 @@ export default function AdminOverviewPage() {
   const totalPending = pendingOpps.length + pendingEvents.length + pendingMoments.length + pendingProjects.length + pendingReports.length;
 
   const approvedCount = 
-    opportunities.filter(o => o.status === 'approved').length + 
-    events.filter(e => e.status === 'approved').length +
+    opportunities.filter(o => o.status === 'approved' || (o as any).status === 'published').length + 
+    events.filter(e => e.status === 'approved' || e.status === 'published').length +
     moments.filter(m => m.status === 'approved').length +
     projects.filter(p => p.approvalStatus === 'approved').length;
   const totalSubmissions = opportunities.length + events.length + moments.length + projects.length;

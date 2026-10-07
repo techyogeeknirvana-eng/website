@@ -14,7 +14,8 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, isAuthenticated, isAdmin, isLoading, logout } = useAuth();
+  const { currentUser, isAuthenticated, isAdmin, can, isLoading, logout } = useAuth();
+  const hasAdminAccess = isAdmin || can('admin.access_dashboard');
 
   useEffect(() => {
     if (!isLoading) {
@@ -22,11 +23,11 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
         router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
         return;
       }
-      if (requireAdmin && !isAdmin) {
+      if (requireAdmin && !hasAdminAccess) {
         router.replace('/dashboard?unauthorized=admin');
       }
     }
-  }, [isLoading, isAuthenticated, currentUser, pathname, requireAdmin, isAdmin, router]);
+  }, [isLoading, isAuthenticated, currentUser, pathname, requireAdmin, hasAdminAccess, router]);
 
   const isSuspended =
     Boolean(currentUser?.isSuspended) ||
@@ -97,7 +98,7 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     );
   }
 
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !hasAdminAccess) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center space-y-4">
         <div className="font-display font-black text-6xl text-inherit">403</div>

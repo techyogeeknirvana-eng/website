@@ -3,7 +3,7 @@
  * Centralized HTTP communication layer for all frontend components.
  */
 
-import { User, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Project, CreditWallet, SystemAnnouncement, AuditLog, ContentReport, LiveSession, LiveParticipant, CollabRequest } from '@/types';
+import { User, UserRole, Opportunity, CommunityEvent, CommunityMessage, NirvanaMoment, Project, CreditWallet, SystemAnnouncement, AuditLog, ContentReport, LiveSession, LiveParticipant, CollabRequest, EventRegistration, RegistrationStatus } from '@/types';
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<{ data: T | null; error: string | null; pagination?: any }> {
   try {
@@ -84,7 +84,7 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ updates }),
       }),
-    changeRole: (targetUserId: string, role: 'USER' | 'ADMIN', targetUser?: Partial<User>) =>
+    changeRole: (targetUserId: string, role: UserRole | 'USER' | 'ADMIN', targetUser?: Partial<User>) =>
       request<{ success: boolean }>('/api/users', {
         method: 'PATCH',
         body: JSON.stringify({ action: 'change_role', targetUserId, role, user: targetUser }),
@@ -217,6 +217,13 @@ export const api = {
       }>('/api/events/extract', {
         method: 'POST',
         body: JSON.stringify({ url }),
+      }),
+    getRegistrations: (eventId: string) =>
+      request<EventRegistration[]>(`/api/events?action=registrations&eventId=${encodeURIComponent(eventId)}`),
+    updateRegistrationStatus: (eventId: string, targetUserId: string, status: RegistrationStatus) =>
+      request<{ success: boolean; status: RegistrationStatus }>('/api/events', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update_registration', eventId, targetUserId, status }),
       }),
   },
 

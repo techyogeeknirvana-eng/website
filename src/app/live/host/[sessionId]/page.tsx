@@ -6,6 +6,9 @@ import {
   Radio, 
   Users, 
   Play, 
+  Pause,
+  ThumbsUp,
+  MessageSquare,
   ChevronRight, 
   ChevronLeft, 
   Trophy, 
@@ -126,6 +129,15 @@ export default function HostLiveSessionPage() {
     setSession({ ...dbStore.getLiveSessionByCode(session.code)! });
   };
 
+  const handleTogglePause = () => {
+    soundEffects.playClick();
+    dbStore.togglePauseLiveSession(session.code);
+    const updated = dbStore.getLiveSessionByCode(session.code);
+    if (updated) {
+      setSession({ ...updated });
+    }
+  };
+
   // Sort participants by score for leaderboard
   const sortedParticipants = [...session.participants].sort((a, b) => b.score - a.score);
 
@@ -156,9 +168,43 @@ export default function HostLiveSessionPage() {
             <Users size={16} style={{ color: 'var(--accent-cyan)' }} />
             <span>{session.participants.length} Joined</span>
           </div>
+          {session.isPaused && (
+            <span
+              style={{
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                letterSpacing: '1px',
+                padding: '3px 10px',
+                borderRadius: '999px',
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#f59e0b',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+              }}
+            >
+              ⏸️ PAUSED
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Pause / Resume button */}
+          <button
+            onClick={handleTogglePause}
+            className="btn-secondary"
+            style={{
+              fontSize: '0.82rem',
+              padding: '6px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: session.isPaused ? '#10b981' : '#f59e0b',
+              borderColor: session.isPaused ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)',
+            }}
+          >
+            {session.isPaused ? <Play size={14} /> : <Pause size={14} />}
+            <span>{session.isPaused ? 'Resume Session' : 'Pause Session'}</span>
+          </button>
+
           {/* PIN Badge */}
           <div
             onClick={() => setQrModalOpen(true)}
@@ -383,6 +429,88 @@ export default function HostLiveSessionPage() {
                     {w}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* Q&A Section if slide type is qa */}
+            {currentSlide.type === 'qa' && (
+              <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 700 }}>
+                    <MessageSquare size={18} style={{ color: 'var(--accent-cyan)' }} />
+                    <span>Audience Questions ({(session.qaQuestions || []).length})</span>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Ranked by audience upvotes
+                  </span>
+                </div>
+
+                {(!session.qaQuestions || session.qaQuestions.length === 0) ? (
+                  <div className="glass-card" style={{ padding: '48px 24px', textAlign: 'center', borderRadius: 'var(--radius-lg)' }}>
+                    <MessageSquare size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 12px auto', opacity: 0.5 }} />
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+                      No questions submitted yet. Audience members can submit and upvote questions live!
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[...session.qaQuestions]
+                      .sort((a, b) => b.upvotes - a.upvotes)
+                      .map(q => (
+                        <div
+                          key={q.id}
+                          className="glass-card"
+                          style={{
+                            padding: '16px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '16px',
+                            borderLeft: q.isAnswered ? '4px solid #10b981' : '4px solid var(--accent-cyan)',
+                            opacity: q.isAnswered ? 0.7 : 1,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                            <img
+                              src={q.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
+                              alt={q.authorName || q.participantName}
+                              style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                            />
+                            <div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                {q.authorName || q.participantName} • {new Date(q.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              <div style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+                                {q.question}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              className="badge badge-cyan"
+                              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '6px 12px' }}
+                            >
+                              <ThumbsUp size={14} />
+                              <span>{q.upvotes}</span>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                soundEffects.playClick();
+                                dbStore.markLiveQAQuestionAnswered(session.code, q.id);
+                                setSession({ ...dbStore.getLiveSessionByCode(session.code)! });
+                              }}
+                              className={q.isAnswered ? 'btn btn-ghost text-xs' : 'btn btn-secondary text-xs'}
+                              style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                            >
+                              {q.isAnswered ? '✓ Answered' : 'Mark Answered'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
 

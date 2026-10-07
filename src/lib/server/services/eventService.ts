@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { CommunityEvent, EventCategory, SubmissionStatus, User, UserRole } from '@/types';
+import { CommunityEvent, EventCategory, SubmissionStatus, User, UserRole, EventRegistration, RegistrationStatus } from '@/types';
 import crypto from 'crypto';
 
 function safeParseJson(val: any, fallback: any = []): any {
@@ -13,12 +13,13 @@ function safeParseJson(val: any, fallback: any = []): any {
 }
 
 export interface EventFilter {
-  status?: SubmissionStatus;
+  status?: SubmissionStatus | 'all';
   category?: string;
   search?: string;
   page?: number;
   limit?: number;
   userId?: string;
+  isAdmin?: boolean;
 }
 
 export const eventService = {
@@ -48,6 +49,12 @@ export const eventService = {
       participantsCount: registrations.length + (row.max_participants ? Math.min(row.max_participants, 15) : 10),
       maxParticipants: row.max_participants || undefined,
       bannerImage: row.poster_url || row.banner_image || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+      rules: row.rules || undefined,
+      schedule: row.schedule || undefined,
+      prizes: row.prizes || undefined,
+      teamSize: row.team_size || undefined,
+      fees: row.fees || undefined,
+      contactEmail: row.contact_email || undefined,
       postedBy: {
         id: row.poster_id,
         name: row.poster_name,
@@ -69,12 +76,18 @@ export const eventService = {
     const conditions: string[] = ['e.deleted_at IS NULL'];
     const params: any[] = [];
 
-    if (filter.status) {
+    if (filter.status && filter.status !== 'all') {
       conditions.push('e.status = ?');
       params.push(filter.status);
+    } else if (filter.isAdmin) {
+      // Admins see all non-deleted events across all statuses
+    } else if (filter.userId) {
+      // Authenticated users: public sees 'approved' & 'published', but creator sees their own pending/draft/changes_requested/rejected
+      conditions.push("(e.status IN ('approved', 'published') OR e.posted_by_user_id = ?)");
+      params.push(filter.userId);
     } else {
-      // Show all active/approved events to all users (exclude only rejected)
-      conditions.push("(e.status != 'rejected' OR e.status IS NULL)");
+      // Public / Guest: ONLY approved or published events
+      conditions.push("e.status IN ('approved', 'published')");
     }
 
     if (filter.category) {
@@ -118,15 +131,22 @@ export const eventService = {
   async createEvent(data: Partial<CommunityEvent>, user: User): Promise<CommunityEvent> {
     const id = data.id || ('event_' + crypto.randomUUID().slice(0, 10));
     const now = new Date().toISOString();
-    const status: SubmissionStatus = 'approved';
+    
+    // User-submitted events are NEVER automatically published:
+    // They start in 'pending' awaiting admin review (unless created by an Admin who explicitly requested 'approved')
+    const isAdmin = user.role === 'ADMIN' || user.email?.toLowerCase().trim() === 'techyogeeknirvana@gmail.com';
+    const status: SubmissionStatus = (isAdmin && data.status === 'approved') 
+      ? 'approved' 
+      : (data.status === 'draft' ? 'draft' : 'pending');
 
     await db.execute(`
       INSERT INTO community_events (
         id, title, category, organizer, organizer_logo, date, time, location,
         is_online, registration_deadline, description, eligibility, skills,
-        registration_url, event_website_url, poster_url, max_participants, banner_image, posted_by_user_id,
-        status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        registration_url, event_website_url, poster_url, max_participants, banner_image,
+        rules, schedule, prizes, team_size, fees, contact_email,
+        posted_by_user_id, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       id,
       data.title || 'Untitled Community Event',
@@ -145,7 +165,13 @@ export const eventService = {
       data.eventWebsiteUrl || null,
       data.posterUrl || data.bannerImage || null,
       data.maxParticipants || null,
-      data.bannerImage || data.posterUrl || null,
+      data.bannerImage || data.posterUrl || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+      data.rules || null,
+      data.schedule || null,
+      data.prizes || null,
+      data.teamSize || 'Individual / Teams up to 4',
+      data.fees || 'Free',
+      data.contactEmail || user.email || null,
       user.id,
       status,
       now,
@@ -178,34 +204,78 @@ export const eventService = {
       UPDATE community_events SET status = ?, rejection_reason = ?, updated_at = ? WHERE id = ?
     `, [newStatus, rejectionReason || null, now, id]);
 
-    await db.execute(`
-      INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      'log_' + crypto.randomUUID(),
-      now,
-      adminUser.id,
-      adminUser.name,
-      adminUser.role,
-      newStatus === 'approved' ? 'APPROVE_EVENT' : 'REJECT_EVENT',
-      'event',
-      id,
-      `Reviewed community event. Set status to ${newStatus}`,
-      'success'
-    ]);
+    let action = 'REVIEW_EVENT';
+    if (newStatus === 'approved') action = 'APPROVE_EVENT';
+    else if (newStatus === 'rejected') action = 'REJECT_EVENT';
+    else if (newStatus === 'changes_requested') action = 'REQUEST_CHANGES_EVENT';
+    else if (newStatus === 'cancelled') action = 'CANCEL_EVENT';
+    else if (newStatus === 'archived') action = 'ARCHIVE_EVENT';
+
+    try {
+      await db.execute(`
+        INSERT INTO audit_logs (id, timestamp, actor_id, actor_name, actor_role, action, target_type, target_id, details, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        'log_' + crypto.randomUUID(),
+        now,
+        adminUser.id,
+        adminUser.name,
+        adminUser.role,
+        action,
+        'event',
+        id,
+        `${action}: Status changed to "${newStatus}"${rejectionReason ? ` | Notes: ${rejectionReason}` : ''}`,
+        newStatus === 'rejected' ? 'warning' : 'success'
+      ]);
+    } catch (_) {}
 
     const evt = await this.getEventById(id);
     return evt!;
   },
 
-  async toggleRSVP(eventId: string, userId: string): Promise<boolean> {
+  async listEventRegistrations(eventId: string): Promise<EventRegistration[]> {
+    const rows = await db.queryAll<any>(`
+      SELECT er.*, u.name as user_name, u.email as user_email, u.avatar as user_avatar
+      FROM event_registrations er
+      JOIN users u ON er.user_id = u.id
+      WHERE er.event_id = ?
+      ORDER BY er.created_at DESC
+    `, [eventId]);
+
+    return rows.map((r: any) => ({
+      userId: r.user_id,
+      eventId: r.event_id,
+      userName: r.user_name || 'Community Member',
+      userEmail: r.user_email || '',
+      userAvatar: r.user_avatar || undefined,
+      status: (r.status || 'REGISTERED') as RegistrationStatus,
+      teamName: r.team_name || undefined,
+      createdAt: r.created_at,
+      attendedAt: r.attended_at || undefined,
+    }));
+  },
+
+  async updateRegistrationStatus(eventId: string, userId: string, status: RegistrationStatus): Promise<boolean> {
+    const now = new Date().toISOString();
+    const attendedAt = status === 'ATTENDED' ? now : null;
+    await db.execute(`
+      UPDATE event_registrations SET status = ?, attended_at = ? WHERE event_id = ? AND user_id = ?
+    `, [status, attendedAt, eventId, userId]);
+    return true;
+  },
+
+  async toggleRSVP(eventId: string, userId: string, details?: { teamName?: string }): Promise<boolean> {
     const existing = await db.queryOne('SELECT * FROM event_registrations WHERE user_id = ? AND event_id = ?', [userId, eventId]);
 
     if (existing) {
       await db.execute('DELETE FROM event_registrations WHERE user_id = ? AND event_id = ?', [userId, eventId]);
       return false;
     } else {
-      await db.execute('INSERT INTO event_registrations (user_id, event_id, created_at) VALUES (?, ?, ?)', [userId, eventId, new Date().toISOString()]);
+      const now = new Date().toISOString();
+      await db.execute(`
+        INSERT INTO event_registrations (user_id, event_id, status, team_name, created_at)
+        VALUES (?, ?, 'REGISTERED', ?, ?)
+      `, [userId, eventId, details?.teamName || null, now]);
       return true;
     }
   },

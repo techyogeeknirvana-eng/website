@@ -37,7 +37,7 @@ export default function OpportunitiesPage() {
   const [editingOpp, setEditingOpp] = useState<Opportunity | null>(null);
 
   const loadData = async () => {
-    const opps = dbStore.getOpportunities(isAdmin);
+    const opps = dbStore.getOpportunities(isAdmin, currentUser?.id);
     setOpportunities(opps);
     if (opps.length > 0 && !selectedOpp) setSelectedOpp(opps[0]);
 
@@ -315,11 +315,15 @@ export default function OpportunitiesPage() {
                     background: isSelected ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-glass-card)',
                   }}
                 >
-                  {opp.status === 'pending' && (
+                  {opp.status !== 'approved' ? (
                     <div
                       style={{
-                        background: 'rgba(234, 179, 8, 0.92)',
-                        color: '#000',
+                        background: opp.status === 'pending' 
+                          ? 'rgba(234, 179, 8, 0.95)' 
+                          : opp.status === 'changes_requested'
+                          ? 'rgba(249, 115, 22, 0.95)'
+                          : 'rgba(239, 68, 68, 0.95)',
+                        color: opp.status === 'pending' ? '#000' : '#fff',
                         padding: '4px 10px',
                         fontSize: '0.72rem',
                         fontWeight: 800,
@@ -331,7 +335,32 @@ export default function OpportunitiesPage() {
                       }}
                     >
                       <Clock size={13} />
-                      <span>⏳ PENDING ADMIN APPROVAL</span>
+                      <span>
+                        {opp.status === 'pending'
+                          ? '⏳ PENDING ADMIN APPROVAL'
+                          : opp.status === 'changes_requested'
+                          ? `⚠️ CHANGES REQUESTED: ${opp.rejectionReason || 'Review requested'}`
+                          : `❌ REJECTED: ${opp.rejectionReason || 'Declined'}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.12)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        color: '#6ee7b7',
+                        padding: '2px 8px',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        borderRadius: '4px',
+                        marginBottom: '10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <CheckCircle2 size={12} />
+                      <span>VERIFIED OPPORTUNITY</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>

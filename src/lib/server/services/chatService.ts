@@ -154,7 +154,13 @@ export const chatService = {
     await db.execute('UPDATE community_messages SET is_pinned = ?, updated_at = ? WHERE id = ?', [isPinned ? 1 : 0, new Date().toISOString(), messageId]);
   },
 
-  async deleteMessage(messageId: string, adminUser: User): Promise<boolean> {
+  async deleteMessage(messageId: string, user: User): Promise<boolean> {
+    const isStaff = user.role === 'ADMIN' || user.role === 'MODERATOR';
+    const msg = await db.queryOne<{ user_id: string }>('SELECT user_id FROM community_messages WHERE id = ?', [messageId]);
+    if (!msg) return false;
+    if (!isStaff && msg.user_id !== user.id) {
+      throw new Error('Forbidden. You can only delete your own messages.');
+    }
     const now = new Date().toISOString();
     const result = await db.execute('UPDATE community_messages SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, messageId]);
     if (result.rowCount > 0) {
@@ -164,10 +170,10 @@ export const chatService = {
       `, [
         'log_' + crypto.randomUUID(),
         now,
-        adminUser.id,
-        adminUser.name,
-        adminUser.role,
-        'DELETE_MESSAGE',
+        user.id,
+        user.name,
+        user.role,
+        user.id === msg.user_id ? 'DELETE_OWN_MESSAGE' : 'MODERATE_DELETE_MESSAGE',
         'community_message',
         messageId,
         `Deleted message ${messageId}`,
@@ -178,7 +184,13 @@ export const chatService = {
     return false;
   },
 
-  async updateMessage(messageId: string, newContent: string, adminUser: User): Promise<boolean> {
+  async updateMessage(messageId: string, newContent: string, user: User): Promise<boolean> {
+    const isStaff = user.role === 'ADMIN' || user.role === 'MODERATOR';
+    const msg = await db.queryOne<{ user_id: string }>('SELECT user_id FROM community_messages WHERE id = ?', [messageId]);
+    if (!msg) return false;
+    if (!isStaff && msg.user_id !== user.id) {
+      throw new Error('Forbidden. You can only edit your own messages.');
+    }
     const now = new Date().toISOString();
     const result = await db.execute('UPDATE community_messages SET content = ?, updated_at = ? WHERE id = ?', [newContent.trim(), now, messageId]);
     if (result.rowCount > 0) {
@@ -188,10 +200,10 @@ export const chatService = {
       `, [
         'log_' + crypto.randomUUID(),
         now,
-        adminUser.id,
-        adminUser.name,
-        adminUser.role,
-        'UPDATE_MESSAGE',
+        user.id,
+        user.name,
+        user.role,
+        user.id === msg.user_id ? 'EDIT_OWN_MESSAGE' : 'MODERATE_EDIT_MESSAGE',
         'community_message',
         messageId,
         `Modified message ${messageId}`,

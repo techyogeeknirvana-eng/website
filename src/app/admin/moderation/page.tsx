@@ -17,7 +17,8 @@ import {
   RotateCw,
   CheckCircle2,
   Edit,
-  Trash2
+  Trash2,
+  Users
 } from 'lucide-react';
 import { dbStore } from '@/lib/db/store';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -25,6 +26,7 @@ import { Opportunity, CommunityEvent, ContentReport, NirvanaMoment, Project } fr
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { api } from '@/lib/client/api';
 import { AdminEditModal } from '@/components/admin/AdminEditModal';
+import { EventParticipantsModal } from '@/components/events/EventParticipantsModal';
 
 export default function ModerationQueuePage() {
   const { currentUser, isAdmin } = useAuth();
@@ -36,6 +38,7 @@ export default function ModerationQueuePage() {
   const [activeTab, setActiveTab] = useState<'all' | 'opportunities' | 'events' | 'moments' | 'projects' | 'reports' | 'history'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingEntity, setEditingEntity] = useState<{ type: 'opportunity' | 'event' | 'project' | 'moment'; item: any } | null>(null);
+  const [rosterModalEvent, setRosterModalEvent] = useState<CommunityEvent | null>(null);
 
   const refreshData = async () => {
     setIsRefreshing(true);
@@ -165,6 +168,16 @@ export default function ModerationQueuePage() {
     soundEffects.playClick();
     await api.events.review(id, 'rejected', reason);
     dbStore.updateEventStatus(id, 'rejected', currentUser, reason);
+    await refreshData();
+  };
+
+  const handleRequestChangesEvent = async (id: string) => {
+    if (!currentUser) return;
+    const notes = prompt('Enter requested changes from event organizer:', 'Please supply official rules, schedule details, and verified links');
+    if (notes === null) return;
+    soundEffects.playClick();
+    await api.events.review(id, 'changes_requested', notes);
+    dbStore.updateEventStatus(id, 'changes_requested', currentUser, notes);
     await refreshData();
   };
 
@@ -819,14 +832,30 @@ export default function ModerationQueuePage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setRosterModalEvent(evt)}
+                        className="btn-secondary"
+                        title="View registered participants roster"
+                        style={{ padding: '8px 12px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        <Users size={14} /> Participants ({evt.participantsCount})
+                      </button>
                       <button
                         onClick={() => setEditingEntity({ type: 'event', item: evt })}
                         className="btn-secondary"
                         title="Modify this event"
-                        style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                        style={{ padding: '8px 12px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                       >
                         <Edit size={14} /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleRequestChangesEvent(evt.id)}
+                        className="btn-secondary"
+                        title="Request modifications from organizer"
+                        style={{ padding: '8px 12px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      >
+                        Changes
                       </button>
                       <button
                         onClick={() => handleDeleteEvent(evt.id)}
@@ -839,7 +868,7 @@ export default function ModerationQueuePage() {
                       <button
                         onClick={() => handleRejectEvent(evt.id)}
                         className="btn-danger"
-                        style={{ padding: '8px 16px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)' }}
+                        style={{ padding: '8px 14px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)' }}
                       >
                         <X size={15} /> Reject
                       </button>
@@ -856,6 +885,14 @@ export default function ModerationQueuePage() {
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     {evt.description}
                   </p>
+
+                  {(evt.rules || evt.schedule || evt.prizes) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '0.78rem', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {evt.rules && <div><strong style={{ color: 'var(--text-primary)' }}>Rules:</strong> <span style={{ color: 'var(--text-muted)' }}>{evt.rules.slice(0, 80)}...</span></div>}
+                      {evt.schedule && <div><strong style={{ color: 'var(--text-primary)' }}>Schedule:</strong> <span style={{ color: 'var(--text-muted)' }}>{evt.schedule.slice(0, 80)}...</span></div>}
+                      {evt.prizes && <div><strong style={{ color: '#f59e0b' }}>Prizes:</strong> <span style={{ color: 'var(--text-muted)' }}>{evt.prizes.slice(0, 80)}...</span></div>}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -1228,6 +1265,16 @@ export default function ModerationQueuePage() {
         item={editingEntity?.item}
         onSave={handleSaveModal}
       />
+
+      {/* Admin Event Participants Roster Modal */}
+      {rosterModalEvent && (
+        <EventParticipantsModal
+          isOpen={Boolean(rosterModalEvent)}
+          onClose={() => setRosterModalEvent(null)}
+          eventId={rosterModalEvent.id}
+          eventTitle={rosterModalEvent.title}
+        />
+      )}
     </div>
   );
 }

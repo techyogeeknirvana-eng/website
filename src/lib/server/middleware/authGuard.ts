@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { db, ensureDbReady } from '../db/client';
-import { User } from '@/types';
+import { User, UserRole } from '@/types';
 import { formatNameFromEmail } from '@/lib/auth/nameUtils';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'tygn_prod_secret_auth_token_key_2026_secure';
@@ -9,7 +9,7 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'tygn_prod_secret_auth_token
 export interface TokenPayload {
   userId: string;
   email: string;
-  role: 'USER' | 'ADMIN';
+  role: UserRole | 'USER' | 'ADMIN';
   sessionId?: string;
   iat?: number;
   exp?: number;
@@ -37,10 +37,21 @@ export function verifyAuthToken(token: string): TokenPayload | null {
   }
 }
 
+import { can, Permission } from '@/lib/auth/permissions';
+
 export function isGlobalAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   const clean = email.toLowerCase().trim();
   return clean === 'techyogeeknirvana@gmail.com' || clean === 'ishpreet823@gmail.com';
+}
+
+export async function requirePermission(
+  req: NextRequest, 
+  permission: Permission
+): Promise<{ user: User | null; authorized: boolean }> {
+  const user = await extractAuthUser(req);
+  const authorized = can(permission, user);
+  return { user, authorized };
 }
 
 export async function extractAuthUser(request: NextRequest, allowSuspended: boolean = false): Promise<User | null> {

@@ -3,10 +3,28 @@ import { extractAuthUser } from '@/lib/server/middleware/authGuard';
 import { eventService } from '@/lib/server/services/eventService';
 import { apiSuccess, apiError, apiPaginated } from '@/lib/server/utils/response';
 
+import { isGlobalAdminEmail } from '@/lib/server/middleware/authGuard';
+
 export async function GET(req: NextRequest) {
   try {
     const authUser = await extractAuthUser(req);
+    const isAdmin = Boolean(authUser && (authUser.role === 'ADMIN' || isGlobalAdminEmail(authUser.email)));
     const { searchParams } = new URL(req.url);
+    const action = searchParams.get('action');
+
+    // Participant management for organizer & admin
+    if (action === 'registrations') {
+      const eventId = searchParams.get('eventId');
+      if (!eventId) return apiError('eventId required', 400);
+      const targetEvent = await eventService.getEventById(eventId);
+      if (!targetEvent) return apiError('Event not found', 404);
+      if (!isAdmin && targetEvent.postedBy.id !== authUser?.id) {
+        return apiError('Forbidden. Only event organizer or admin can view registration list.', 403);
+      }
+      const registrations = await eventService.listEventRegistrations(eventId);
+      return apiSuccess(registrations);
+    }
+
     const status = searchParams.get('status') as any;
     const category = searchParams.get('category') || undefined;
     const search = searchParams.get('search') || undefined;
@@ -22,6 +40,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       userId,
+      isAdmin,
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -61,8 +80,20 @@ export async function POST(req: NextRequest) {
 
     if (action === 'rsvp') {
       if (!eventId) return apiError('eventId required', 400);
-      const isRegistered = await eventService.toggleRSVP(eventId, authUser.id);
+      const isRegistered = await eventService.toggleRSVP(eventId, authUser.id, { teamName: body.teamName });
       return apiSuccess({ isRegistered });
+    }
+
+    if (action === 'update_registration') {
+      const { targetUserId, status } = body;
+      if (!eventId || !targetUserId || !status) return apiError('eventId, targetUserId, and status required', 400);
+      const targetEvent = await eventService.getEventById(eventId);
+      const isAdmin = authUser.role === 'ADMIN' || isGlobalAdminEmail(authUser.email);
+      if (!isAdmin && targetEvent?.postedBy.id !== authUser.id) {
+        return apiError('Forbidden. Only event organizer or admin can update registration status.', 403);
+      }
+      await eventService.updateRegistrationStatus(eventId, targetUserId, status);
+      return apiSuccess({ success: true, status });
     }
 
     const created = await eventService.createEvent(body, authUser);
@@ -71,8 +102,6 @@ export async function POST(req: NextRequest) {
     return apiError(err.message || 'Failed to create event', 400);
   }
 }
-
-import { isGlobalAdminEmail } from '@/lib/server/middleware/authGuard';
 
 export async function PATCH(req: NextRequest) {
   try {

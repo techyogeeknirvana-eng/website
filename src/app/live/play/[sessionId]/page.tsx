@@ -13,7 +13,9 @@ import {
   Sparkles, 
   Send,
   HelpCircle,
-  Play
+  Play,
+  ThumbsUp,
+  MessageSquare
 } from 'lucide-react';
 import { dbStore } from '@/lib/db/store';
 import { LiveSession, LiveParticipant } from '@/types';
@@ -32,6 +34,9 @@ export default function ParticipantPlayPage() {
   const [submissionResult, setSubmissionResult] = useState<{ isCorrect?: boolean; pointsEarned: number } | null>(null);
   const [lastSlideIndex, setLastSlideIndex] = useState<number>(-1);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [qaInput, setQaInput] = useState('');
+  const [submittingQa, setSubmittingQa] = useState(false);
+  const [upvotedQas, setUpvotedQas] = useState<string[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -111,6 +116,26 @@ export default function ParticipantPlayPage() {
         // Confetti fallback
       }
     }
+  };
+
+  const handleQaSubmit = () => {
+    if (!qaInput.trim() || !session || !participant) return;
+    soundEffects.playClick();
+    setSubmittingQa(true);
+    dbStore.submitLiveQAQuestion(session.code, participant.id, participant.nickname, qaInput.trim(), participant.avatar);
+    setQaInput('');
+    setSubmittingQa(false);
+    const updated = dbStore.getLiveSessionByCode(session.code);
+    if (updated) setSession({ ...updated });
+  };
+
+  const handleUpvoteQa = (questionId: string) => {
+    if (upvotedQas.includes(questionId) || !session || !participant) return;
+    soundEffects.playClick();
+    dbStore.upvoteLiveQAQuestion(session.code, questionId, participant.id);
+    setUpvotedQas(prev => [...prev, questionId]);
+    const updated = dbStore.getLiveSessionByCode(session.code);
+    if (updated) setSession({ ...updated });
   };
 
   if (!session) {
@@ -342,6 +367,102 @@ export default function ParticipantPlayPage() {
                   Submit Word <Send size={16} />
                 </button>
               </div>
+            ) : currentSlide.type === 'qa' ? (
+              /* Q&A Interactive Screen */
+              <div>
+                <div className="glass-card" style={{ padding: '24px', marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MessageSquare size={16} style={{ color: 'var(--accent-cyan)' }} />
+                    <span>Ask Presenter a Question</span>
+                  </h4>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Type your question..."
+                      value={qaInput}
+                      onChange={e => setQaInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && qaInput.trim()) {
+                          handleQaSubmit();
+                        }
+                      }}
+                      className="input-custom"
+                      style={{ flex: 1, fontSize: '0.9rem' }}
+                    />
+                    <button
+                      onClick={handleQaSubmit}
+                      disabled={!qaInput.trim() || submittingQa}
+                      className="btn btn-primary"
+                      style={{ padding: '10px 16px', fontSize: '0.88rem' }}
+                    >
+                      <Send size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', padding: '0 4px' }}>
+                    Audience Questions ({(session.qaQuestions || []).length}) • Tap to Upvote
+                  </div>
+                  {(!session.qaQuestions || session.qaQuestions.length === 0) ? (
+                    <div className="glass-card" style={{ padding: '28px 16px', textAlign: 'center', borderRadius: 'var(--radius-lg)' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        No questions yet. Be the first to ask!
+                      </p>
+                    </div>
+                  ) : (
+                    [...session.qaQuestions]
+                      .sort((a, b) => b.upvotes - a.upvotes)
+                      .map(q => {
+                        const hasUpvoted = upvotedQas.includes(q.id);
+                        return (
+                          <div
+                            key={q.id}
+                            className="glass-card"
+                            style={{
+                              padding: '14px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              borderLeft: q.isAnswered ? '4px solid #10b981' : '4px solid var(--accent-cyan)',
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{q.authorName || q.participantName}</span>
+                                {q.isAnswered && (
+                                  <span className="badge badge-emerald" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                                    Answered
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)', marginTop: '2px' }}>
+                                {q.question}
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => handleUpvoteQa(q.id)}
+                              disabled={hasUpvoted}
+                              className={hasUpvoted ? 'btn btn-secondary text-xs' : 'btn btn-primary text-xs'}
+                              style={{
+                                padding: '6px 12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                opacity: hasUpvoted ? 0.6 : 1,
+                              }}
+                            >
+                              <ThumbsUp size={13} />
+                              <span>{q.upvotes}</span>
+                            </button>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+              </div>
             ) : (
               /* High-Contrast Interactive Option Pads */
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
@@ -496,6 +617,49 @@ export default function ParticipantPlayPage() {
           </div>
         )}
       </div>
+
+      {/* Session Paused Overlay */}
+      {session.isPaused && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.88)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            textAlign: 'center',
+          }}
+        >
+          <div className="glass-card glow-border" style={{ padding: '36px', maxWidth: '420px', width: '100%' }}>
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '2px solid #f59e0b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto',
+              }}
+            >
+              <span style={{ fontSize: '24px' }}>⏸️</span>
+            </div>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '8px' }}>Session Paused</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5 }}>
+              The presenter has temporarily paused the session. It will resume automatically in a moment.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

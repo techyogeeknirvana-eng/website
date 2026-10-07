@@ -210,7 +210,31 @@ export async function runMigrations(): Promise<void> {
       await db.execute('ALTER TABLE community_events ADD COLUMN poster_url TEXT');
     } catch (_) {}
     try {
-      await db.execute("UPDATE community_events SET status = 'approved' WHERE (status = 'pending' OR status IS NULL) AND deleted_at IS NULL");
+      await db.execute('ALTER TABLE community_events ADD COLUMN rules TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN schedule TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN prizes TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN team_size TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN fees TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE community_events ADD COLUMN contact_email TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE event_registrations ADD COLUMN status TEXT DEFAULT "REGISTERED"');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE event_registrations ADD COLUMN team_name TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE event_registrations ADD COLUMN attended_at TEXT');
     } catch (_) {}
     try {
       await db.execute("DELETE FROM community_events WHERE deleted_at IS NOT NULL");

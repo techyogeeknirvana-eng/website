@@ -7,6 +7,7 @@ import { soundEffects } from '@/lib/audio/soundEffects';
 import { GoogleAuthModal } from '@/components/auth/GoogleAuthModal';
 import { GoogleOAuthModal } from '@/components/auth/GoogleOAuthModal';
 import { api } from '@/lib/client/api';
+import { can as checkPermission, Permission } from '@/lib/auth/permissions';
 import { formatNameFromEmail } from '@/lib/auth/nameUtils';
 
 interface AuthContextType {
@@ -16,6 +17,9 @@ interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isOrganizer: boolean;
+  isModerator: boolean;
+  can: (permission: Permission) => boolean;
   isGoogleLoggedIn: boolean;
   sessionToken: string | null;
   isLoading: boolean;
@@ -599,7 +603,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = Boolean(
     currentUser &&
     isAuthenticated &&
-    (isGlobalAdminEmail(currentUser.email) || currentUser.role === 'ADMIN')
+    (isGlobalAdminEmail(currentUser.email) || currentUser.role === 'ADMIN' || currentUser.id === 'user_lead_admin')
+  );
+
+  const can = (permission: Permission) => {
+    return checkPermission(permission, currentUser);
+  };
+
+  const isOrganizer = Boolean(
+    currentUser &&
+    (currentUser.role === 'ORGANIZER' || currentUser.role === 'ADMIN' || isGlobalAdminEmail(currentUser.email))
+  );
+
+  const isModerator = Boolean(
+    currentUser &&
+    (currentUser.role === 'MODERATOR' || currentUser.role === 'ADMIN' || isGlobalAdminEmail(currentUser.email))
   );
 
   const loadGoogleScript = (): Promise<boolean> => {
@@ -685,6 +703,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         currentUser,
         isAuthenticated,
         isAdmin,
+        isOrganizer,
+        isModerator,
+        can,
         isGoogleLoggedIn: isAuthenticated,
         sessionToken,
         isLoading,

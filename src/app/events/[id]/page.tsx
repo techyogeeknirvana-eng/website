@@ -26,6 +26,7 @@ import { soundEffects } from '@/lib/audio/soundEffects';
 import { api } from '@/lib/client/api';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminEditModal } from '@/components/admin/AdminEditModal';
+import { EventParticipantsModal } from '@/components/events/EventParticipantsModal';
 
 const FALLBACK_BANNER = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80';
 
@@ -40,6 +41,7 @@ export default function EventDetailPage() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -106,6 +108,26 @@ export default function EventDetailPage() {
     await api.events.review(event.id, 'approved');
     dbStore.updateEventStatus(event.id, 'approved', currentUser);
     setEvent(prev => prev ? { ...prev, status: 'approved' } : null);
+  };
+
+  const handleReject = async () => {
+    if (!event || !currentUser) return;
+    const reason = prompt('Enter reason for rejecting this event:', 'Unverified registration link or schedule');
+    if (reason === null) return;
+    soundEffects.playClick();
+    await api.events.review(event.id, 'rejected', reason);
+    dbStore.updateEventStatus(event.id, 'rejected', currentUser, reason);
+    setEvent(prev => prev ? { ...prev, status: 'rejected', rejectionReason: reason } : null);
+  };
+
+  const handleRequestChanges = async () => {
+    if (!event || !currentUser) return;
+    const notes = prompt('Enter changes requested from organizer:', 'Please add official rules and verification');
+    if (notes === null) return;
+    soundEffects.playClick();
+    await api.events.review(event.id, 'changes_requested', notes);
+    dbStore.updateEventStatus(event.id, 'changes_requested', currentUser, notes);
+    setEvent(prev => prev ? { ...prev, status: 'changes_requested', rejectionReason: notes } : null);
   };
 
   const handleDelete = async () => {
@@ -240,30 +262,59 @@ export default function EventDetailPage() {
           </div>
         </div>
 
-        {/* Admin Quick Action Banner */}
-        {isAdmin && (
+        {/* Host & Admin Quick Action Banner */}
+        {(isAdmin || (currentUser && (event.postedBy?.id === currentUser?.id || (event as any).postedByUserId === currentUser?.id))) && (
           <div className="mb-8 p-4 rounded-2xl border border-white/20 bg-neutral-900/80 backdrop-blur-xl flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-2.5">
               <ShieldCheck size={18} className="text-white" />
               <div>
                 <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                  Administrator Controls
+                  {isAdmin ? 'Administrator & Host Controls' : 'Event Organizer Dashboard'}
                 </span>
-                <span className="text-xs text-neutral-400 block">
-                  Status: <strong className="text-white uppercase">{event.status}</strong>
-                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-neutral-400">
+                    Status: <strong className="text-white uppercase">{event.status}</strong>
+                  </span>
+                  {event.rejectionReason && (
+                    <span className="text-[0.72rem] text-amber-400 font-mono">
+                      (Note: {event.rejectionReason})
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {event.status !== 'approved' && (
-                <button
-                  onClick={handleApprove}
-                  className="btn btn-primary text-xs py-1.5 px-3.5 rounded-full font-bold flex items-center gap-1.5"
-                >
-                  <Check size={13} />
-                  <span>Approve &amp; Publish</span>
-                </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setIsParticipantsOpen(true)}
+                className="btn btn-secondary text-xs py-1.5 px-3.5 rounded-full font-bold flex items-center gap-1.5"
+              >
+                <Users size={13} />
+                <span>Manage Participants ({event.participantsCount})</span>
+              </button>
+
+              {isAdmin && event.status !== 'approved' && (
+                <>
+                  <button
+                    onClick={handleApprove}
+                    className="btn btn-primary text-xs py-1.5 px-3.5 rounded-full font-bold flex items-center gap-1.5"
+                  >
+                    <Check size={13} />
+                    <span>Approve &amp; Publish</span>
+                  </button>
+                  <button
+                    onClick={handleRequestChanges}
+                    className="btn btn-secondary text-xs py-1.5 px-3.5 rounded-full font-semibold flex items-center gap-1.5 text-inherit"
+                  >
+                    <span>Request Changes</span>
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="btn-ghost text-xs py-1.5 px-3 rounded-full font-semibold text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"
+                  >
+                    <span>Reject</span>
+                  </button>
+                </>
               )}
 
               <button
@@ -274,13 +325,15 @@ export default function EventDetailPage() {
                 <span>Modify Event</span>
               </button>
 
-              <button
-                onClick={handleDelete}
-                className="btn-ghost text-xs py-1.5 px-3 rounded-full font-semibold text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"
-              >
-                <Trash2 size={13} />
-                <span>Delete</span>
-              </button>
+              {(isAdmin || event.postedBy?.id === currentUser?.id) && (
+                <button
+                  onClick={handleDelete}
+                  className="btn-ghost text-xs py-1.5 px-3 rounded-full font-semibold text-red-400 hover:bg-red-500/10 flex items-center gap-1.5"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -356,6 +409,60 @@ export default function EventDetailPage() {
                 {event.eligibility || 'Open to all engineering students, self-taught developers, and tech builders.'}
               </p>
             </div>
+
+            {/* Event Format, Team Size & Fees */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-white/10 bg-white/5">
+              <div>
+                <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Team Size / Format</div>
+                <div className="text-xs sm:text-sm font-bold text-white mt-0.5">{event.teamSize || 'Individual / 1-4 Members'}</div>
+              </div>
+              <div>
+                <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Participation Fee</div>
+                <div className="text-xs sm:text-sm font-bold text-emerald-400 mt-0.5">{event.fees || 'Free'}</div>
+              </div>
+              {event.contactEmail && (
+                <div className="sm:col-span-2 pt-2 border-t border-white/10">
+                  <div className="text-[0.68rem] font-mono uppercase text-[#737373]">Organizer Contact</div>
+                  <div className="text-xs font-mono text-cyan-300 mt-0.5">{event.contactEmail}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Schedule / Timeline */}
+            {event.schedule && (
+              <div className="space-y-2">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white">
+                  Schedule &amp; Timeline
+                </h3>
+                <div className="p-4 rounded-xl border border-white/10 bg-white/5 text-xs sm:text-sm text-neutral-300 whitespace-pre-wrap font-sans">
+                  {event.schedule}
+                </div>
+              </div>
+            )}
+
+            {/* Rules & Guidelines */}
+            {event.rules && (
+              <div className="space-y-2">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white">
+                  Rules &amp; Guidelines
+                </h3>
+                <div className="p-4 rounded-xl border border-white/10 bg-white/5 text-xs sm:text-sm text-neutral-300 whitespace-pre-wrap font-sans">
+                  {event.rules}
+                </div>
+              </div>
+            )}
+
+            {/* Prizes & Rewards */}
+            {event.prizes && (
+              <div className="space-y-2">
+                <h3 className="font-display font-bold text-base sm:text-lg text-white">
+                  Prizes &amp; Rewards
+                </h3>
+                <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-xs sm:text-sm text-amber-200 whitespace-pre-wrap font-sans">
+                  {event.prizes}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Action Sidebar */}
@@ -466,6 +573,14 @@ export default function EventDetailPage() {
             onSave={handleSaveModal}
           />
         )}
+
+        {/* Event Participants Roster Modal */}
+        <EventParticipantsModal
+          isOpen={isParticipantsOpen}
+          onClose={() => setIsParticipantsOpen(false)}
+          eventId={event.id}
+          eventTitle={event.title}
+        />
       </div>
     </ProtectedRoute>
   );

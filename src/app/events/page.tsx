@@ -130,6 +130,34 @@ function EventsContent() {
     }
   };
 
+  const handleRejectEvent = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!currentUser) return;
+    const reason = prompt('Enter reason for rejecting this event:', 'Unverified details or invalid registration link');
+    if (reason === null) return;
+    soundEffects.playClick();
+    await api.events.review(id, 'rejected', reason);
+    dbStore.updateEventStatus(id, 'rejected', currentUser, reason);
+    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, status: 'rejected', rejectionReason: reason } : evt));
+    if (selectedEventModal?.id === id) {
+      setSelectedEventModal(prev => prev ? { ...prev, status: 'rejected', rejectionReason: reason } : null);
+    }
+  };
+
+  const handleRequestChanges = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!currentUser) return;
+    const notes = prompt('Enter changes requested from organizer:', 'Please add official rules and valid schedule link');
+    if (notes === null) return;
+    soundEffects.playClick();
+    await api.events.review(id, 'changes_requested', notes);
+    dbStore.updateEventStatus(id, 'changes_requested', currentUser, notes);
+    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, status: 'changes_requested', rejectionReason: notes } : evt));
+    if (selectedEventModal?.id === id) {
+      setSelectedEventModal(prev => prev ? { ...prev, status: 'changes_requested', rejectionReason: notes } : null);
+    }
+  };
+
   const handleSaveEvent = async (updated: CommunityEvent) => {
     if (!currentUser) return;
     await api.events.update(updated.id, updated);
@@ -348,27 +376,44 @@ function EventsContent() {
             >
               {/* Event Banner */}
               <div style={{ position: 'relative', height: '180px', width: '100%' }}>
-                {evt.status === 'pending' && (
+                {evt.status !== 'approved' && (
                   <div
                     style={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
-                      background: 'rgba(234, 179, 8, 0.92)',
-                      color: '#000',
+                      background: evt.status === 'pending'
+                        ? 'rgba(234, 179, 8, 0.95)'
+                        : evt.status === 'changes_requested'
+                        ? 'rgba(249, 115, 22, 0.95)'
+                        : 'rgba(239, 68, 68, 0.95)',
+                      color: evt.status === 'pending' ? '#000' : '#fff',
                       padding: '6px 12px',
-                      fontSize: '0.74rem',
+                      fontSize: '0.72rem',
                       fontWeight: 800,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
+                      justifyContent: 'space-between',
                       zIndex: 3,
                       backdropFilter: 'blur(4px)',
                     }}
                   >
-                    <Clock size={14} />
-                    <span>⏳ PENDING ADMIN APPROVAL</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Clock size={13} style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {evt.status === 'pending'
+                          ? '⏳ PENDING REVIEW'
+                          : evt.status === 'changes_requested'
+                          ? `⚠️ CHANGES REQUESTED: ${evt.rejectionReason || 'Please review guidelines'}`
+                          : `❌ REJECTED: ${evt.rejectionReason || 'Not approved'}`}
+                      </span>
+                    </div>
+                    {(evt.postedBy?.id === currentUser?.id || (evt as any).postedByUserId === currentUser?.id) && (
+                      <span style={{ fontSize: '0.68rem', opacity: 0.9, flexShrink: 0, marginLeft: '8px' }}>
+                        YOUR SUBMISSION
+                      </span>
+                    )}
                   </div>
                 )}
                 <img
@@ -520,13 +565,15 @@ function EventsContent() {
                     }}
                     onClick={e => e.stopPropagation()}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <span
                         className={
                           evt.status === 'approved'
                             ? 'badge badge-emerald'
                             : evt.status === 'rejected'
                             ? 'badge badge-rose'
+                            : evt.status === 'changes_requested'
+                            ? 'badge badge-amber'
                             : 'badge badge-amber'
                         }
                         style={{ fontSize: '0.68rem' }}
@@ -534,13 +581,31 @@ function EventsContent() {
                         {evt.status?.toUpperCase() || 'APPROVED'}
                       </span>
                       {evt.status !== 'approved' && (
-                        <button
-                          onClick={e => handleApproveEvent(evt.id, e)}
-                          className="btn-success"
-                          style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px' }}
-                        >
-                          Allow
-                        </button>
+                        <>
+                          <button
+                            onClick={e => handleApproveEvent(evt.id, e)}
+                            className="btn-success"
+                            style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px' }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={e => handleRequestChanges(evt.id, e)}
+                            className="btn-secondary"
+                            title="Request changes from organizer"
+                            style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px' }}
+                          >
+                            Changes
+                          </button>
+                          <button
+                            onClick={e => handleRejectEvent(evt.id, e)}
+                            className="btn-ghost"
+                            title="Reject event"
+                            style={{ padding: '3px 8px', fontSize: '0.72rem', borderRadius: '4px', color: '#ef4444' }}
+                          >
+                            Reject
+                          </button>
+                        </>
                       )}
                     </div>
 

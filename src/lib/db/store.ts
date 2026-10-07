@@ -10,6 +10,7 @@ import {
   LiveSession,
   LiveParticipant,
   LiveResponse,
+  LiveQAQuestion,
   AuditLog,
   ContentReport,
   TechRadarItem,
@@ -518,7 +519,7 @@ class DataStore {
     return user.isSuspended;
   }
 
-  public changeUserRole(userId: string, newRole: 'USER' | 'ADMIN', adminUser: User): boolean {
+  public changeUserRole(userId: string, newRole: UserRole, adminUser: User): boolean {
     const user = this.getUser(userId);
     if (!user) return false;
     user.role = newRole;
@@ -602,9 +603,12 @@ class DataStore {
   }
 
   // --- Opportunities ---
-  public getOpportunities(includePending: boolean = false): Opportunity[] {
+  public getOpportunities(includePending: boolean = false, currentUserId?: string): Opportunity[] {
     if (includePending) return [...this.opportunities];
-    return this.opportunities.filter(o => o.status === 'approved');
+    return this.opportunities.filter(o => 
+      o.status === 'approved' || 
+      (currentUserId && (o.postedBy?.id === currentUserId || (o as any).postedByUserId === currentUserId))
+    );
   }
 
   public getOpportunity(id: string): Opportunity | undefined {
@@ -750,10 +754,20 @@ class DataStore {
   }
 
   // --- Events ---
-  public getEvents(includePending: boolean = false, currentUserId?: string): CommunityEvent[] {
-    if (includePending) return [...this.events];
-    // Return all active events (exclude only rejected) so all users can see community events
-    return this.events.filter(e => e.status !== 'rejected');
+  public getEvents(isAdmin: boolean = false, currentUserId?: string): CommunityEvent[] {
+    if (isAdmin) {
+      // Admins see all events
+      return [...this.events];
+    }
+    return this.events.filter(e => {
+      // Public approved / published events
+      if (e.status === 'approved' || e.status === 'published') return true;
+      // Authors see their own pending / changes_requested / rejected submissions
+      if (currentUserId && (e.postedBy?.id === currentUserId || (e as any).postedByUserId === currentUserId)) {
+        return true;
+      }
+      return false;
+    });
   }
 
   public getEvent(id: string): CommunityEvent | undefined {
@@ -778,12 +792,13 @@ class DataStore {
     eventData: Omit<CommunityEvent, 'id' | 'createdAt' | 'status' | 'participantsCount' | 'postedBy'>,
     postedBy: User
   ): CommunityEvent {
+    const isAdmin = postedBy.role === 'ADMIN' || postedBy.email?.toLowerCase().trim() === 'techyogeeknirvana@gmail.com';
     const newEvent: CommunityEvent = {
       ...eventData,
       id: 'event_' + Date.now(),
       participantsCount: 1,
       registeredUsers: [postedBy.id],
-      status: 'approved',
+      status: isAdmin ? 'approved' : 'pending',
       postedBy: {
         id: postedBy.id,
         name: postedBy.name,
@@ -935,7 +950,10 @@ class DataStore {
       userId: newMsg.userId,
       userName: newMsg.userName,
       userAvatar: newMsg.userAvatar,
-      userRole: newMsg.userRole
+      userRole: newMsg.userRole,
+      codeSnippet: newMsg.codeSnippet,
+      attachments: newMsg.attachments,
+      replyToId: newMsg.replyToId,
     });
     this.addXP(msgData.userId, 10);
     return newMsg;
@@ -975,28 +993,30 @@ class DataStore {
     this.syncApi('/api/community', 'POST', { action: 'reaction', messageId: msgId, emoji, userId });
   }
 
-  public deleteMessage(msgId: string, adminUser: User): boolean {
+  public deleteMessage(msgId: string, actorUser: User): boolean {
+    const msg = this.messages.find(m => m.id === msgId);
     this.messages = this.messages.filter(m => m.id !== msgId);
     this.save(STORAGE_KEYS.MESSAGES, this.messages);
     this.syncApi(`/api/community?messageId=${encodeURIComponent(msgId)}`, 'DELETE');
 
+    const isOwn = msg && msg.userId === actorUser.id;
     this.addAuditLog({
       id: 'log_' + Date.now(),
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-      actorId: adminUser.id,
-      actorName: adminUser.name,
-      actorRole: adminUser.role,
-      action: 'DELETE_MESSAGE',
+      actorId: actorUser.id,
+      actorName: actorUser.name,
+      actorRole: actorUser.role,
+      action: isOwn ? 'DELETE_OWN_MESSAGE' : 'MODERATE_DELETE_MESSAGE',
       targetType: 'message',
       targetId: msgId,
-      details: `Moderator deleted community message ${msgId}`,
+      details: isOwn ? `Author deleted their message ${msgId}` : `Moderator deleted community message ${msgId}`,
       status: 'warning'
     });
 
     return true;
   }
 
-  public editMessageContent(msgId: string, content: string, adminUser: User): boolean {
+  public editMessageContent(msgId: string, content: string, actorUser: User): boolean {
     const msg = this.messages.find(m => m.id === msgId);
     if (!msg) return false;
     msg.content = content.trim();
@@ -1004,16 +1024,17 @@ class DataStore {
     this.save(STORAGE_KEYS.MESSAGES, this.messages);
     this.syncApi('/api/community', 'PATCH', { messageId: msgId, content: msg.content });
 
+    const isOwn = msg.userId === actorUser.id;
     this.addAuditLog({
       id: 'log_' + Date.now(),
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC',
-      actorId: adminUser.id,
-      actorName: adminUser.name,
-      actorRole: adminUser.role,
-      action: 'UPDATE_MESSAGE',
+      actorId: actorUser.id,
+      actorName: actorUser.name,
+      actorRole: actorUser.role,
+      action: isOwn ? 'EDIT_OWN_MESSAGE' : 'MODERATE_EDIT_MESSAGE',
       targetType: 'message',
       targetId: msgId,
-      details: `Admin edited message ${msgId}`,
+      details: isOwn ? `Author edited message ${msgId}` : `Admin/Moderator edited message ${msgId}`,
       status: 'success'
     });
 
@@ -1635,6 +1656,69 @@ class DataStore {
     });
 
     return session;
+  }
+
+  public submitLiveQAQuestion(code: string, participantId: string, participantName: string, question: string, authorAvatar?: string) {
+    const clean = code.trim();
+    const session = this.getLiveSessionByCode(clean);
+    if (!session) return;
+    session.qaQuestions = session.qaQuestions || [];
+    const newQ: LiveQAQuestion = {
+      id: 'qa_' + Date.now(),
+      participantId,
+      participantName,
+      authorName: participantName,
+      authorAvatar,
+      question: question.trim(),
+      upvotes: 1,
+      upvotedBy: [participantId],
+      isAnswered: false,
+      createdAt: new Date().toISOString()
+    };
+    session.qaQuestions.unshift(newQ);
+    this.save(STORAGE_KEYS.LIVE_SESSIONS, this.liveSessions);
+    this.syncApi('/api/live', 'POST', { action: 'qa_submit', code: clean, question: newQ });
+    return newQ;
+  }
+
+  public upvoteLiveQAQuestion(code: string, questionId: string, userId: string) {
+    const clean = code.trim();
+    const session = this.getLiveSessionByCode(clean);
+    if (!session || !session.qaQuestions) return;
+    const q = session.qaQuestions.find(item => item.id === questionId);
+    if (!q) return;
+    q.upvotedBy = q.upvotedBy || [];
+    const idx = q.upvotedBy.indexOf(userId);
+    if (idx > -1) {
+      q.upvotedBy.splice(idx, 1);
+      q.upvotes = Math.max(0, q.upvotes - 1);
+    } else {
+      q.upvotedBy.push(userId);
+      q.upvotes += 1;
+    }
+    this.save(STORAGE_KEYS.LIVE_SESSIONS, this.liveSessions);
+    this.syncApi('/api/live', 'POST', { action: 'qa_upvote', code: clean, questionId, userId });
+  }
+
+  public markLiveQAQuestionAnswered(code: string, questionId: string) {
+    const clean = code.trim();
+    const session = this.getLiveSessionByCode(clean);
+    if (!session || !session.qaQuestions) return;
+    const q = session.qaQuestions.find(item => item.id === questionId);
+    if (!q) return;
+    q.isAnswered = true;
+    this.save(STORAGE_KEYS.LIVE_SESSIONS, this.liveSessions);
+    this.syncApi('/api/live', 'POST', { action: 'qa_answered', code: clean, questionId });
+  }
+
+  public togglePauseLiveSession(code: string): boolean {
+    const clean = code.trim();
+    const session = this.getLiveSessionByCode(clean);
+    if (!session) return false;
+    session.isPaused = !session.isPaused;
+    this.save(STORAGE_KEYS.LIVE_SESSIONS, this.liveSessions);
+    this.syncApi('/api/live', 'POST', { action: 'pause', code: clean, isPaused: session.isPaused });
+    return session.isPaused;
   }
 
   // --- Tech Radar ---

@@ -57,6 +57,12 @@ export default function SubmitEventPage() {
   const [description, setDescription] = useState('');
   const [eligibility, setEligibility] = useState('Open to all engineering students & developers');
   const [skillsInput, setSkillsInput] = useState('');
+  const [rules, setRules] = useState('');
+  const [schedule, setSchedule] = useState('');
+  const [prizes, setPrizes] = useState('');
+  const [teamSize, setTeamSize] = useState('Individual or 1-4 Members');
+  const [fees, setFees] = useState('Free to attend');
+  const [contactEmail, setContactEmail] = useState('');
   
   // UI States
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
@@ -218,6 +224,12 @@ export default function SubmitEventPage() {
         eventWebsiteUrl: eventWebsiteUrl.trim() || registrationUrl.trim(),
         posterUrl: bannerImage.trim(),
         bannerImage: bannerImage.trim(),
+        rules: rules.trim(),
+        schedule: schedule.trim(),
+        prizes: prizes.trim(),
+        teamSize: teamSize.trim(),
+        fees: fees.trim(),
+        contactEmail: contactEmail.trim(),
       },
       currentUser
     );
@@ -755,6 +767,93 @@ export default function SubmitEventPage() {
                     value={eligibility}
                     onChange={e => setEligibility(e.target.value)}
                     className="input-custom"
+                  />
+                </div>
+              </div>
+
+              {/* Team Size, Fees, Contact Email */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Team Size / Format
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1 - 4 Members or Individual"
+                    value={teamSize}
+                    onChange={e => setTeamSize(e.target.value)}
+                    className="input-custom"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Participation Fee
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Free or ₹200 / team"
+                    value={fees}
+                    onChange={e => setFees(e.target.value)}
+                    className="input-custom"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Organizer Contact Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. contact@gdg-campus.org"
+                    value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)}
+                    className="input-custom"
+                  />
+                </div>
+              </div>
+
+              {/* Schedule, Rules & Prizes */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Event Schedule / Timeline
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Day 1: Keynote (10 AM), Day 2: Hackathon & Demo (5 PM)..."
+                    value={schedule}
+                    onChange={e => setSchedule(e.target.value)}
+                    className="input-custom"
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Rules &amp; Guidelines
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Plagiarism strictly prohibited. GitHub repo must be public..."
+                    value={rules}
+                    onChange={e => setRules(e.target.value)}
+                    className="input-custom"
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>
+                    Prizes &amp; Rewards
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. 1st: ₹50,000 + Internship Interview, 2nd: ₹25,000..."
+                    value={prizes}
+                    onChange={e => setPrizes(e.target.value)}
+                    className="input-custom"
+                    style={{ resize: 'vertical' }}
                   />
                 </div>
               </div>
