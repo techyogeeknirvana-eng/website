@@ -24,6 +24,7 @@ const ROUTE_META: Record<string, BreadcrumbRouteMeta> = {
   '/roadmaps': { title: 'Engineering Roadmaps', category: 'Academic' },
   '/projects': { title: 'Open Showcase Projects', category: 'Academic' },
   '/events': { title: 'Events & Competitions', category: 'Events' },
+  '/events/submit': { title: 'Host / Submit Event', category: 'Events' },
   '/opportunities': { title: 'Curated Opportunities', category: 'Events' },
   '/growth': { title: 'Personal Growth Hub', category: 'Growth' },
   '/games': { title: 'Games Arena', category: 'Growth' },

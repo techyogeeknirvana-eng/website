@@ -17,12 +17,16 @@ import { dbStore } from '@/lib/db/store';
 import { EventCategory } from '@/types';
 import { soundEffects } from '@/lib/audio/soundEffects';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { EventPosterUpload } from '@/components/events/EventPosterUpload';
 
 export default function SubmitEventPage() {
   const router = useRouter();
   const { currentUser, isAdmin } = useAuth();
 
   const [title, setTitle] = useState('');
+  const [bannerImage, setBannerImage] = useState('');
+  const [posterFileName, setPosterFileName] = useState('');
+  const [posterFileSize, setPosterFileSize] = useState<number | undefined>(undefined);
   const [category, setCategory] = useState<EventCategory>('Hackathons');
   const [organizer, setOrganizer] = useState('');
   const [date, setDate] = useState('April 15 - 17, 2026');
@@ -35,11 +39,19 @@ export default function SubmitEventPage() {
   const [skillsInput, setSkillsInput] = useState('React, Next.js, AI, Full Stack');
   const [registrationUrl, setRegistrationUrl] = useState('https://');
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [posterError, setPosterError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       alert('Please log in or select a profile first.');
+      return;
+    }
+
+    if (!bannerImage.trim()) {
+      soundEffects.playError();
+      setPosterError('Please upload an official event poster or promotional banner.');
+      window.scrollTo({ top: 200, behavior: 'smooth' });
       return;
     }
 
@@ -59,7 +71,7 @@ export default function SubmitEventPage() {
         eligibility,
         skills,
         registrationUrl,
-        bannerImage: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80',
+        bannerImage: bannerImage.trim(),
       },
       currentUser
     );
@@ -188,6 +200,29 @@ export default function SubmitEventPage() {
                 onChange={e => setTitle(e.target.value)}
                 className="input-custom"
               />
+            </div>
+
+            {/* Event Poster / Banner Upload Field */}
+            <div>
+              <EventPosterUpload
+                value={bannerImage}
+                onChange={(url, fileInfo) => {
+                  setBannerImage(url);
+                  setPosterError('');
+                  if (fileInfo) {
+                    setPosterFileName(fileInfo.filename);
+                    setPosterFileSize(fileInfo.size);
+                  }
+                }}
+                required
+                initialFileName={posterFileName}
+                initialFileSize={posterFileSize}
+              />
+              {posterError && (
+                <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '6px', fontFamily: 'monospace' }}>
+                  ⚠ {posterError}
+                </p>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>

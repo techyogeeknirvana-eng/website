@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Shield, AlertTriangle, Sparkles, Check } from 'lucide-react';
 import { Opportunity, CommunityEvent, Project, NirvanaMoment, User } from '@/types';
 import { soundEffects } from '@/lib/audio/soundEffects';
+import { EventPosterUpload } from '@/components/events/EventPosterUpload';
 
 interface AdminEditModalProps {
   isOpen: boolean;
@@ -371,12 +372,9 @@ export function AdminEditModal({ isOpen, onClose, type, item, onSave }: AdminEdi
               </div>
 
               <div>
-                <label className="label-custom">Banner Image URL</label>
-                <input
-                  type="url"
+                <EventPosterUpload
                   value={formData.bannerImage || ''}
-                  onChange={e => handleChange('bannerImage', e.target.value)}
-                  className="input-custom"
+                  onChange={(url) => handleChange('bannerImage', url)}
                 />
               </div>
 

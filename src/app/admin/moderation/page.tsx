@@ -755,20 +755,36 @@ export default function ModerationQueuePage() {
                     borderLeft: '4px solid var(--accent-amber)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '14px',
                     marginBottom: '16px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <span className="badge badge-amber" style={{ fontSize: '0.7rem', marginBottom: '6px' }}>
-                        PENDING APPROVAL
-                      </span>
-                      <h4 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                        {evt.title}
-                      </h4>
-                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        Organizer: {evt.organizer} • Date: {evt.date} • Submitter: {evt.postedBy.name}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      {evt.bannerImage && (
+                        <div style={{ width: '120px', height: '76px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.15)', flexShrink: 0 }}>
+                          <img
+                            src={evt.bannerImage}
+                            alt={evt.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span className="badge badge-amber" style={{ fontSize: '0.7rem' }}>
+                            PENDING APPROVAL
+                          </span>
+                          <span className="badge badge-cyan" style={{ fontSize: '0.7rem' }}>
+                            {evt.category}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+                          {evt.title}
+                        </h4>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Organizer: {evt.organizer} • Date: {evt.date} • Submitter: {evt.postedBy.name}
+                        </div>
                       </div>
                     </div>
 
@@ -961,18 +977,29 @@ export default function ModerationQueuePage() {
                       gap: '12px',
                     }}
                   >
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
-                          <Check size={12} /> APPROVED &amp; PUBLISHED
-                        </span>
-                        <span className="badge badge-amber" style={{ fontSize: '0.7rem' }}>
-                          Event ({evt.category})
-                        </span>
-                      </div>
-                      <h4 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{evt.title}</h4>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        Organizer: {evt.organizer} • Date: {evt.date} • Submitted by: {evt.postedBy.name}
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                      {evt.bannerImage && (
+                        <div style={{ width: '70px', height: '46px', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)', flexShrink: 0 }}>
+                          <img
+                            src={evt.bannerImage}
+                            alt={evt.title}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span className="badge badge-emerald" style={{ fontSize: '0.7rem' }}>
+                            <Check size={12} /> APPROVED &amp; PUBLISHED
+                          </span>
+                          <span className="badge badge-amber" style={{ fontSize: '0.7rem' }}>
+                            Event ({evt.category})
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{evt.title}</h4>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Organizer: {evt.organizer} • Date: {evt.date} • Submitted by: {evt.postedBy.name}
+                        </div>
                       </div>
                     </div>
 

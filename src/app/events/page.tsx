@@ -288,9 +288,12 @@ export default function EventsPage() {
                   </div>
                 )}
                 <img
-                  src={evt.bannerImage}
-                  alt={evt.title}
+                  src={evt.bannerImage || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80'}
+                  alt={evt.title || 'Event poster'}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e: any) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80';
+                  }}
                 />
                 <span
                   className="badge badge-amber"
@@ -477,9 +480,12 @@ export default function EventsPage() {
           >
             <div style={{ height: '220px', width: '100%', position: 'relative' }}>
               <img
-                src={selectedEventModal.bannerImage}
-                alt={selectedEventModal.title}
+                src={selectedEventModal.bannerImage || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80'}
+                alt={selectedEventModal.title || 'Event poster'}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e: any) => {
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&auto=format&fit=crop&q=80';
+                }}
               />
               <span className="badge badge-amber" style={{ position: 'absolute', top: '16px', left: '16px' }}>
                 {selectedEventModal.category}
@@ -557,13 +563,23 @@ export default function EventsPage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
-                <button
-                  onClick={() => setSelectedEventModal(null)}
-                  className="btn-ghost"
-                >
-                  Close
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => setSelectedEventModal(null)}
+                    className="btn-ghost"
+                  >
+                    Close
+                  </button>
+                  <a
+                    href={`/events/${selectedEventModal.id}`}
+                    className="btn-ghost text-xs"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <span>Full Page</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
 
                 <button
                   onClick={e => {

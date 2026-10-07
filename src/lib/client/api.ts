@@ -406,4 +406,43 @@ export const api = {
         method: 'DELETE',
       }),
   },
+
+  // Media & Poster Upload
+  upload: {
+    image: async (file: File): Promise<{ url: string; filename: string; size: number } | null> => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('tygn_session_token') : null;
+      const headers: Record<string, string> = {};
+      if (token && token !== 'tygn_server_session_active') {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.error || 'Upload failed');
+      }
+      return json.data;
+    },
+    base64: async (dataUrl: string, filename?: string): Promise<{ url: string; filename: string; size: number } | null> => {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl, filename }),
+        credentials: 'include',
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) {
+        throw new Error(json.error || 'Upload failed');
+      }
+      return json.data;
+    },
+  },
 };
